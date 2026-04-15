@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Histogram czasów realizacji</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
   <style>
     body {
@@ -33,6 +34,39 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.1);
       padding: 32px 40px;
     }
+    .controls {
+      max-width: 860px;
+      margin: 0 auto 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 20px 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+    }
+    .controls section {
+      flex: 1;
+      min-width: 220px;
+    }
+    .controls h2 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      color: #333;
+    }
+    .stat-toggles {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stat-toggles label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .stat-toggles input[type="checkbox"] {
     .stat-controls {
       max-width: 860px;
       margin: 16px auto 0;
@@ -55,6 +89,47 @@
       height: 15px;
       cursor: pointer;
     }
+    .color-dot {
+      display: inline-block;
+      width: 14px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .add-data-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .add-data-form select,
+    .add-data-form input[type="number"] {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .add-data-form select {
+      width: 70px;
+    }
+    .add-data-form input[type="number"] {
+      width: 120px;
+    }
+    .add-data-form button {
+      padding: 6px 16px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .add-data-form button:hover {
+      background: #357abd;
+    }
+    #addStatus {
+      font-size: 13px;
+      color: #2a7a2a;
+      margin-top: 6px;
     .stat-swatch {
       display: inline-block;
       width: 24px;
@@ -67,6 +142,50 @@
 <body>
   <h1>Histogram czasów realizacji</h1>
   <p class="subtitle">Rozkład czasów realizacji zadań według rozmiaru (S / M / L)</p>
+
+  <div class="controls">
+    <section>
+      <h2>Linie statystyczne</h2>
+      <div class="stat-toggles">
+        <label>
+          <input type="checkbox" id="showMean" checked>
+          <span class="color-dot" style="background:#e74c3c;"></span>
+          Średnia
+        </label>
+        <label>
+          <input type="checkbox" id="showMedian" checked>
+          <span class="color-dot" style="background:#8e44ad;"></span>
+          Mediana
+        </label>
+        <label>
+          <input type="checkbox" id="showP85" checked>
+          <span class="color-dot" style="background:#e67e22;background:repeating-linear-gradient(90deg,#e67e22 0,#e67e22 5px,transparent 5px,transparent 10px);height:3px;"></span>
+          85. percentyl
+        </label>
+        <label>
+          <input type="checkbox" id="showP95" checked>
+          <span class="color-dot" style="background:#16a085;"></span>
+          95. percentyl
+        </label>
+      </div>
+    </section>
+    <section>
+      <h2>Dodaj zadanie ręcznie</h2>
+      <div class="add-data-form">
+        <label for="newSize">Rozmiar:</label>
+        <select id="newSize">
+          <option value="S">S</option>
+          <option value="M">M</option>
+          <option value="L">L</option>
+        </select>
+        <label for="newTime">Czas (dni):</label>
+        <input type="number" id="newTime" placeholder="np. 75" min="1">
+        <button onclick="addDataPoint()">Dodaj</button>
+      </div>
+      <div id="addStatus"></div>
+    </section>
+  </div>
+
   <div class="chart-container">
     <canvas id="histogram"></canvas>
   </div>
@@ -127,15 +246,134 @@
     const colors  = { S: 'rgba(54,162,235,0.8)',  M: 'rgba(255,159,64,0.8)',  L: 'rgba(75,192,100,0.8)' };
     const borders = { S: 'rgba(54,162,235,1)',     M: 'rgba(255,159,64,1)',    L: 'rgba(75,192,100,1)'   };
 
-    const datasets = sizes.map(size => ({
-      label: 'Rozmiar ' + size,
-      data: bins.map(bin =>
-        rawData.filter(d => d.size === size && d.time >= bin.min && d.time <= bin.max).length
-      ),
-      backgroundColor: colors[size],
-      borderColor: borders[size],
-      borderWidth: 1,
-    }));
+    const STATUS_COLOR_ERROR = '#c0392b';
+    const STATUS_COLOR_OK    = '#2a7a2a';
+    function calcMean(data) {
+      if (data.length === 0) return 0;
+      return data.reduce((s, d) => s + d.time, 0) / data.length;
+    }
+
+    function calcPercentile(sorted, p) {
+      if (sorted.length === 0) return 0;
+      const idx = (p / 100) * (sorted.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+    }
+
+    // Przelicza wartość czasu (dni) na pozycję osi X (indeks kategorii)
+    // Środek przedziału n-tego koszyka: n*50 + 25
+    // Zatem: x = (value - 25) / 50
+    function timeToX(value) {
+      return (value - 25) / 50;
+    }
+
+    function buildAnnotations(data) {
+      const sorted = data.map(d => d.time).sort((a, b) => a - b);
+      const mean   = calcMean(data);
+      const median = calcPercentile(sorted, 50);
+      const p85    = calcPercentile(sorted, 85);
+      const p95    = calcPercentile(sorted, 95);
+
+      const showMean   = document.getElementById('showMean').checked;
+      const showMedian = document.getElementById('showMedian').checked;
+      const showP85    = document.getElementById('showP85').checked;
+      const showP95    = document.getElementById('showP95').checked;
+
+      const annotations = {};
+
+      if (showMean) {
+        annotations.meanLine = {
+          type: 'line',
+          xMin: timeToX(mean),
+          xMax: timeToX(mean),
+          borderColor: '#e74c3c',
+          borderWidth: 2,
+          label: {
+            display: true,
+            content: 'Śr: ' + mean.toFixed(1) + ' dni',
+            position: '5%',
+            color: '#e74c3c',
+            backgroundColor: 'rgba(255,255,255,0.85)',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
+        };
+      }
+
+      if (showMedian) {
+        annotations.medianLine = {
+          type: 'line',
+          xMin: timeToX(median),
+          xMax: timeToX(median),
+          borderColor: '#8e44ad',
+          borderWidth: 2,
+          label: {
+            display: true,
+            content: 'Med: ' + median.toFixed(1) + ' dni',
+            position: '20%',
+            color: '#8e44ad',
+            backgroundColor: 'rgba(255,255,255,0.85)',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
+        };
+      }
+
+      if (showP85) {
+        annotations.p85Line = {
+          type: 'line',
+          xMin: timeToX(p85),
+          xMax: timeToX(p85),
+          borderColor: '#e67e22',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: true,
+            content: 'P85: ' + p85.toFixed(1) + ' dni',
+            position: '35%',
+            color: '#e67e22',
+            backgroundColor: 'rgba(255,255,255,0.85)',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
+        };
+      }
+
+      if (showP95) {
+        annotations.p95Line = {
+          type: 'line',
+          xMin: timeToX(p95),
+          xMax: timeToX(p95),
+          borderColor: '#16a085',
+          borderWidth: 2,
+          borderDash: [3, 3],
+          label: {
+            display: true,
+            content: 'P95: ' + p95.toFixed(1) + ' dni',
+            position: '50%',
+            color: '#16a085',
+            backgroundColor: 'rgba(255,255,255,0.85)',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
+        };
+      }
+
+      return annotations;
+    }
+
+    function buildDatasets(data) {
+      return sizes.map(size => ({
+        label: 'Rozmiar ' + size,
+        data: bins.map(bin =>
+          data.filter(d => d.size === size && d.time >= bin.min && d.time <= bin.max).length
+        ),
+        backgroundColor: colors[size],
+        borderColor: borders[size],
+        borderWidth: 1,
+      }));
+    }
 
     // Obliczenia statystyk
     function calcStats(data) {
@@ -231,7 +469,7 @@
       type: 'bar',
       data: {
         labels: bins.map(b => b.label),
-        datasets: datasets,
+        datasets: buildDatasets(rawData),
       },
       options: {
         responsive: true,
@@ -244,6 +482,7 @@
             },
           },
           annotation: {
+            annotations: buildAnnotations(rawData),
             annotations: statAnnotations,
           },
         },
@@ -262,6 +501,41 @@
       },
     });
 
+    function updateChart() {
+      chart.data.datasets = buildDatasets(rawData);
+      chart.options.plugins.annotation.annotations = buildAnnotations(rawData);
+      chart.update();
+    }
+
+    // Obsługa checkboxów
+    ['showMean', 'showMedian', 'showP85', 'showP95'].forEach(id => {
+      document.getElementById(id).addEventListener('change', updateChart);
+    });
+
+    // Dodawanie danych ręcznie
+    function addDataPoint() {
+      const sizeEl = document.getElementById('newSize');
+      const timeEl = document.getElementById('newTime');
+      const statusEl = document.getElementById('addStatus');
+      const time = parseInt(timeEl.value, 10);
+
+      if (!timeEl.value || isNaN(time) || time < 1) {
+        statusEl.style.color = STATUS_COLOR_ERROR;
+        statusEl.textContent = 'Podaj prawidłowy czas realizacji (liczba ≥ 1).';
+        return;
+      }
+
+      rawData.push({ size: sizeEl.value, time: time });
+      updateChart();
+
+      statusEl.style.color = STATUS_COLOR_OK;
+      statusEl.textContent = 'Dodano: rozmiar ' + sizeEl.value + ', czas ' + time + ' dni. Łącznie: ' + rawData.length + ' zadań.';
+      timeEl.value = '';
+    }
+
+    // Umożliwia zatwierdzenie formularza klawiszem Enter
+    document.getElementById('newTime').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addDataPoint(); }
     // Obsługa przełączników widoczności linii
     ['mean', 'median', 'p85', 'p95'].forEach(id => {
       document.getElementById('toggle-' + id).addEventListener('change', function () {

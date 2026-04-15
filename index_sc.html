@@ -34,24 +34,46 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.1);
       padding: 32px 40px;
     }
-    .stat-controls {
+    /* Controls panel */
+    .controls {
       max-width: 960px;
-      margin: 16px auto 0;
+      margin: 0 auto 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 20px 40px;
       display: flex;
       flex-wrap: wrap;
-      gap: 12px 24px;
-      justify-content: center;
+      gap: 32px;
     }
-    .stat-controls label {
+    .controls section {
+      flex: 1;
+      min-width: 200px;
+    }
+    .controls h2 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+    .filter-toggles,
+    .stat-toggles {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .filter-toggles label,
+    .stat-toggles label {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: #444;
+      gap: 8px;
+      font-size: 14px;
       cursor: pointer;
       user-select: none;
     }
-    .stat-controls input[type="checkbox"] {
+    .filter-toggles input[type="checkbox"],
+    .stat-toggles input[type="checkbox"] {
       width: 15px;
       height: 15px;
       cursor: pointer;
@@ -63,32 +85,226 @@
       border-radius: 2px;
       flex-shrink: 0;
     }
+    .size-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 12px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .size-badge.S { background: rgba(54, 162, 235, 1); }
+    .size-badge.M { background: rgba(255, 159, 64, 1); }
+    .size-badge.L { background: rgba(75, 192, 100, 1); }
+    /* Manual data entry form */
+    .add-data-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .add-data-form .form-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .add-data-form .form-row label {
+      font-size: 13px;
+      color: #555;
+      white-space: nowrap;
+    }
+    .add-data-form input[type="date"],
+    .add-data-form input[type="number"],
+    .add-data-form select {
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .add-data-form input[type="date"] { width: 145px; }
+    .add-data-form input[type="number"] { width: 80px; }
+    .add-data-form select { width: 60px; }
+    .add-data-form button {
+      padding: 6px 16px;
+      background: #4a90d9;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .add-data-form button:hover { background: #357abd; }
+    #addStatus {
+      font-size: 12px;
+      min-height: 16px;
+      margin-top: 2px;
+    }
+    /* Per-size statistics grid */
+    .stats-grid {
+      max-width: 960px;
+      margin: 20px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 16px 20px;
+    }
+    .stat-card h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stat-card .card-count {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    .stat-card table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .stat-card table td {
+      padding: 3px 0;
+      color: #555;
+    }
+    .stat-card table td:last-child {
+      text-align: right;
+      font-weight: bold;
+      color: #222;
+    }
+    .stat-card.overall {
+      background: #f0f4ff;
+      border: 1px solid #d0d8f0;
+    }
   </style>
 </head>
 <body>
   <h1>Scatterplot czasów realizacji</h1>
   <p class="subtitle">Czasy realizacji zadań w czasie według rozmiaru (S / M / L)</p>
 
+  <!-- Controls panel -->
+  <div class="controls">
+    <section>
+      <h2>Filtruj według rozmiaru</h2>
+      <div class="filter-toggles">
+        <label>
+          <input type="checkbox" id="filter-S" checked>
+          <span class="size-badge S">S</span> Mały
+        </label>
+        <label>
+          <input type="checkbox" id="filter-M" checked>
+          <span class="size-badge M">M</span> Średni
+        </label>
+        <label>
+          <input type="checkbox" id="filter-L" checked>
+          <span class="size-badge L">L</span> Duży
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Linie statystyczne</h2>
+      <div class="stat-toggles">
+        <label>
+          <input type="checkbox" id="toggle-p50" checked>
+          <span class="stat-swatch" style="background:#1e88e5;"></span>
+          P50 (mediana): <strong id="val-p50">–</strong> dni
+        </label>
+        <label>
+          <input type="checkbox" id="toggle-p85" checked>
+          <span class="stat-swatch" style="background:#fb8c00;"></span>
+          P85: <strong id="val-p85">–</strong> dni
+        </label>
+        <label>
+          <input type="checkbox" id="toggle-p95" checked>
+          <span class="stat-swatch" style="background:#8e24aa;"></span>
+          P95: <strong id="val-p95">–</strong> dni
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Dodaj zadanie ręcznie</h2>
+      <div class="add-data-form">
+        <div class="form-row">
+          <label for="newDate">Data:</label>
+          <input type="date" id="newDate">
+        </div>
+        <div class="form-row">
+          <label for="newSize">Rozmiar:</label>
+          <select id="newSize">
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+          </select>
+          <label for="newTime">Czas (dni):</label>
+          <input type="number" id="newTime" placeholder="np. 75" min="1">
+        </div>
+        <button onclick="addDataPoint()">Dodaj</button>
+        <div id="addStatus"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Chart -->
   <div class="chart-container">
     <canvas id="scatterplot"></canvas>
   </div>
 
-  <div class="stat-controls">
-    <label>
-      <input type="checkbox" id="toggle-p50" checked>
-      <span class="stat-swatch" style="background:#1e88e5;"></span>
-      50. percentyl (mediana): <span id="val-p50">–</span> dni
-    </label>
-    <label>
-      <input type="checkbox" id="toggle-p85" checked>
-      <span class="stat-swatch" style="background:#fb8c00;"></span>
-      85. percentyl: <span id="val-p85">–</span> dni
-    </label>
-    <label>
-      <input type="checkbox" id="toggle-p95" checked>
-      <span class="stat-swatch" style="background:#8e24aa;"></span>
-      95. percentyl: <span id="val-p95">–</span> dni
-    </label>
+  <!-- Per-size statistics cards -->
+  <div class="stats-grid">
+    <div class="stat-card" id="card-S">
+      <h3><span class="size-badge S">S</span> Rozmiar S</h3>
+      <div class="card-count" id="count-S">0 zadań</div>
+      <table>
+        <tr><td>P50 (mediana)</td><td><span id="p50-S">–</span> dni</td></tr>
+        <tr><td>P85</td><td><span id="p85-S">–</span> dni</td></tr>
+        <tr><td>P95</td><td><span id="p95-S">–</span> dni</td></tr>
+      </table>
+    </div>
+    <div class="stat-card" id="card-M">
+      <h3><span class="size-badge M">M</span> Rozmiar M</h3>
+      <div class="card-count" id="count-M">0 zadań</div>
+      <table>
+        <tr><td>P50 (mediana)</td><td><span id="p50-M">–</span> dni</td></tr>
+        <tr><td>P85</td><td><span id="p85-M">–</span> dni</td></tr>
+        <tr><td>P95</td><td><span id="p95-M">–</span> dni</td></tr>
+      </table>
+    </div>
+    <div class="stat-card" id="card-L">
+      <h3><span class="size-badge L">L</span> Rozmiar L</h3>
+      <div class="card-count" id="count-L">0 zadań</div>
+      <table>
+        <tr><td>P50 (mediana)</td><td><span id="p50-L">–</span> dni</td></tr>
+        <tr><td>P85</td><td><span id="p85-L">–</span> dni</td></tr>
+        <tr><td>P95</td><td><span id="p95-L">–</span> dni</td></tr>
+      </table>
+    </div>
+    <div class="stat-card overall" id="card-All">
+      <h3>📊 Łącznie</h3>
+      <div class="card-count" id="count-All">0 zadań</div>
+      <table>
+        <tr><td>P50 (mediana)</td><td><span id="p50-All">–</span> dni</td></tr>
+        <tr><td>P85</td><td><span id="p85-All">–</span> dni</td></tr>
+        <tr><td>P95</td><td><span id="p95-All">–</span> dni</td></tr>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -144,104 +360,150 @@
       L: 'rgba(75, 192, 100, 1)',
     };
 
+    const STATUS_COLOR_ERROR = '#c0392b';
+    const STATUS_COLOR_OK    = '#2a7a2a';
+
+    // Active filters and stat-line visibility state
+    const activeFilters   = { S: true, M: true, L: true };
+    const statLineVisible = { p50: true, p85: true, p95: true };
+
     function calcPercentile(sorted, p) {
-      if (sorted.length === 0) return 0;
+      if (sorted.length === 0) return null;
       const idx = (p / 100) * (sorted.length - 1);
       const lo = Math.floor(idx);
       const hi = Math.ceil(idx);
       return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
     }
 
-    const allTimes = rawData.map(d => d.time).sort((a, b) => a - b);
-    const p50 = calcPercentile(allTimes, 50);
-    const p85 = calcPercentile(allTimes, 85);
-    const p95 = calcPercentile(allTimes, 95);
+    function getFilteredData() {
+      return rawData.filter(d => activeFilters[d.size]);
+    }
 
-    document.getElementById('val-p50').textContent = p50.toFixed(1);
-    document.getElementById('val-p85').textContent = p85.toFixed(1);
-    document.getElementById('val-p95').textContent = p95.toFixed(1);
+    // Build annotation lines based on currently filtered data
+    function buildAnnotations() {
+      const data  = getFilteredData();
+      const times = data.map(d => d.time).sort((a, b) => a - b);
 
-    const datasets = sizes.map(size => ({
-      label: 'Rozmiar ' + size,
-      data: rawData
-        .filter(d => d.size === size)
-        .map(d => ({ x: d.date, y: d.time })),
-      backgroundColor: colors[size],
-      borderColor: borders[size],
-      borderWidth: 1.5,
-      pointRadius: 7,
-      pointHoverRadius: 9,
-    }));
+      const p50val = calcPercentile(times, 50);
+      const p85val = calcPercentile(times, 85);
+      const p95val = calcPercentile(times, 95);
 
-    const statAnnotations = {
-      p50: {
-        display: true,
-        type: 'line',
-        yMin: p50, yMax: p50,
-        borderColor: '#1e88e5',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'P50: ' + p50.toFixed(1) + ' dni',
-          position: 'end',
-          yAdjust: -10,
-          backgroundColor: 'rgba(30,136,229,0.12)',
-          color: '#1565c0',
-          font: { size: 11, weight: 'bold' },
-          padding: 4,
+      document.getElementById('val-p50').textContent = p50val !== null ? p50val.toFixed(1) : '–';
+      document.getElementById('val-p85').textContent = p85val !== null ? p85val.toFixed(1) : '–';
+      document.getElementById('val-p95').textContent = p95val !== null ? p95val.toFixed(1) : '–';
+
+      if (times.length === 0) return {};
+
+      return {
+        p50: {
+          display: statLineVisible.p50,
+          type: 'line',
+          yMin: p50val, yMax: p50val,
+          borderColor: '#1e88e5',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: true,
+            content: 'P50: ' + p50val.toFixed(1) + ' dni',
+            position: 'end',
+            yAdjust: -10,
+            backgroundColor: 'rgba(30,136,229,0.12)',
+            color: '#1565c0',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
         },
-      },
-      p85: {
-        display: true,
-        type: 'line',
-        yMin: p85, yMax: p85,
-        borderColor: '#fb8c00',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'P85: ' + p85.toFixed(1) + ' dni',
-          position: 'end',
-          yAdjust: -10,
-          backgroundColor: 'rgba(251,140,0,0.12)',
-          color: '#e65100',
-          font: { size: 11, weight: 'bold' },
-          padding: 4,
+        p85: {
+          display: statLineVisible.p85,
+          type: 'line',
+          yMin: p85val, yMax: p85val,
+          borderColor: '#fb8c00',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: true,
+            content: 'P85: ' + p85val.toFixed(1) + ' dni',
+            position: 'end',
+            yAdjust: -10,
+            backgroundColor: 'rgba(251,140,0,0.12)',
+            color: '#e65100',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
         },
-      },
-      p95: {
-        display: true,
-        type: 'line',
-        yMin: p95, yMax: p95,
-        borderColor: '#8e24aa',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'P95: ' + p95.toFixed(1) + ' dni',
-          position: 'end',
-          yAdjust: -10,
-          backgroundColor: 'rgba(142,36,170,0.12)',
-          color: '#6a1b9a',
-          font: { size: 11, weight: 'bold' },
-          padding: 4,
+        p95: {
+          display: statLineVisible.p95,
+          type: 'line',
+          yMin: p95val, yMax: p95val,
+          borderColor: '#8e24aa',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          label: {
+            display: true,
+            content: 'P95: ' + p95val.toFixed(1) + ' dni',
+            position: 'end',
+            yAdjust: -10,
+            backgroundColor: 'rgba(142,36,170,0.12)',
+            color: '#6a1b9a',
+            font: { size: 11, weight: 'bold' },
+            padding: 4,
+          },
         },
-      },
-    };
+      };
+    }
+
+    // Update per-size and overall statistics cards (always reflects full rawData)
+    function updateStatCards() {
+      sizes.forEach(size => {
+        const times = rawData.filter(d => d.size === size).map(d => d.time).sort((a, b) => a - b);
+        const n = times.length;
+        document.getElementById('count-' + size).textContent = n + ' zadań';
+        document.getElementById('p50-' + size).textContent = n > 0 ? calcPercentile(times, 50).toFixed(1) : '–';
+        document.getElementById('p85-' + size).textContent = n > 0 ? calcPercentile(times, 85).toFixed(1) : '–';
+        document.getElementById('p95-' + size).textContent = n > 0 ? calcPercentile(times, 95).toFixed(1) : '–';
+      });
+      const allTimes = rawData.map(d => d.time).sort((a, b) => a - b);
+      const nAll = allTimes.length;
+      document.getElementById('count-All').textContent = nAll + ' zadań';
+      document.getElementById('p50-All').textContent = nAll > 0 ? calcPercentile(allTimes, 50).toFixed(1) : '–';
+      document.getElementById('p85-All').textContent = nAll > 0 ? calcPercentile(allTimes, 85).toFixed(1) : '–';
+      document.getElementById('p95-All').textContent = nAll > 0 ? calcPercentile(allTimes, 95).toFixed(1) : '–';
+    }
+
+    function buildDatasets() {
+      return sizes.map(size => ({
+        label: 'Rozmiar ' + size,
+        data: rawData.filter(d => d.size === size).map(d => ({ x: d.date, y: d.time })),
+        backgroundColor: colors[size],
+        borderColor: borders[size],
+        borderWidth: 1.5,
+        pointRadius: 7,
+        pointHoverRadius: 9,
+        hidden: !activeFilters[size],
+      }));
+    }
 
     const ctx = document.getElementById('scatterplot').getContext('2d');
     const chart = new Chart(ctx, {
       type: 'scatter',
-      data: { datasets },
+      data: { datasets: buildDatasets() },
       options: {
         responsive: true,
         plugins: {
-          legend: { position: 'top' },
+          legend: {
+            position: 'top',
+            onClick: (e, legendItem) => {
+              const size = sizes[legendItem.datasetIndex];
+              activeFilters[size] = !activeFilters[size];
+              document.getElementById('filter-' + size).checked = activeFilters[size];
+              updateAll();
+            },
+          },
           tooltip: {
             callbacks: {
               label: item => {
-                const d = rawData.filter(r => r.size === item.dataset.label.replace('Rozmiar ', ''))
+                const size = item.dataset.label.replace('Rozmiar ', '');
+                const d = rawData.filter(r => r.size === size)
                   .find(r => r.date === item.raw.x && r.time === item.raw.y);
                 const dateStr = d ? d.date : item.raw.x;
                 return ' ' + item.dataset.label + ' | Data: ' + dateStr + ' | Czas: ' + item.raw.y + ' dni';
@@ -249,7 +511,7 @@
             },
           },
           annotation: {
-            annotations: statAnnotations,
+            annotations: buildAnnotations(),
           },
         },
         scales: {
@@ -270,12 +532,75 @@
       },
     });
 
-    ['p50', 'p85', 'p95'].forEach(id => {
-      document.getElementById('toggle-' + id).addEventListener('change', function () {
-        chart.options.plugins.annotation.annotations[id].display = this.checked;
-        chart.update();
+    // Rebuild chart data, annotations, and stat cards
+    function updateAll() {
+      sizes.forEach((size, i) => {
+        chart.data.datasets[i].data = rawData
+          .filter(d => d.size === size)
+          .map(d => ({ x: d.date, y: d.time }));
+        chart.data.datasets[i].hidden = !activeFilters[size];
+      });
+      chart.options.plugins.annotation.annotations = buildAnnotations();
+      updateStatCards();
+      chart.update();
+    }
+
+    // Filter checkboxes
+    sizes.forEach(size => {
+      document.getElementById('filter-' + size).addEventListener('change', function () {
+        activeFilters[size] = this.checked;
+        updateAll();
       });
     });
+
+    // Stat-line visibility toggles
+    ['p50', 'p85', 'p95'].forEach(id => {
+      document.getElementById('toggle-' + id).addEventListener('change', function () {
+        statLineVisible[id] = this.checked;
+        updateAll();
+      });
+    });
+
+    // Manual data entry
+    function addDataPoint() {
+      const dateEl   = document.getElementById('newDate');
+      const sizeEl   = document.getElementById('newSize');
+      const timeEl   = document.getElementById('newTime');
+      const statusEl = document.getElementById('addStatus');
+
+      if (!dateEl.value) {
+        statusEl.style.color = STATUS_COLOR_ERROR;
+        statusEl.textContent = 'Podaj datę realizacji.';
+        return;
+      }
+
+      const time = parseInt(timeEl.value, 10);
+      if (!timeEl.value || isNaN(time) || time < 1) {
+        statusEl.style.color = STATUS_COLOR_ERROR;
+        statusEl.textContent = 'Podaj prawidłowy czas realizacji (liczba ≥ 1).';
+        return;
+      }
+
+      rawData.push({ date: dateEl.value, size: sizeEl.value, time });
+      rawData.sort((a, b) => a.date.localeCompare(b.date));
+      updateAll();
+
+      statusEl.style.color = STATUS_COLOR_OK;
+      statusEl.textContent = 'Dodano: ' + dateEl.value + ', rozmiar ' + sizeEl.value +
+        ', czas ' + time + ' dni. Łącznie: ' + rawData.length + ' zadań.';
+      timeEl.value = '';
+    }
+
+    // Enter key submits the form
+    document.getElementById('newTime').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addDataPoint(); }
+    });
+
+    // Default date to today
+    document.getElementById('newDate').value = new Date().toISOString().slice(0, 10);
+
+    // Initial render of stat cards
+    updateStatCards();
   </script>
 </body>
 </html>

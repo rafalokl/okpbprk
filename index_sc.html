@@ -196,16 +196,15 @@
     /* Unicorn runner */
     #unicorn-runner {
       position: fixed;
-      bottom: 36px;
-      font-size: 52px;
+      bottom: 4px;
       z-index: 9999;
       pointer-events: none;
       user-select: none;
       animation: unicorn-bob 0.35s ease-in-out infinite alternate;
     }
     @keyframes unicorn-bob {
-      from { transform: scaleX(-1) translateY(0px);  }
-      to   { transform: scaleX(-1) translateY(-8px); }
+      from { transform: translateY(0px);  }
+      to   { transform: translateY(-8px); }
     }
     .fart-bubble {
       position: fixed;
@@ -631,7 +630,37 @@
   </script>
 
   <!-- Unicorn running across the page and releasing colorful farts -->
-  <div id="unicorn-runner">🦄</div>
+  <div id="unicorn-runner"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100" width="140" height="100">
+    <!-- Tail strands (rear/left end — where farts come from) -->
+    <path d="M36,62 C22,52 16,38 24,28" stroke="#ff69b4" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M36,68 C18,60 10,46 18,36" stroke="#c77dff" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M36,73 C22,66 16,54 22,44" stroke="#ffd700" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Body -->
+    <ellipse cx="75" cy="65" rx="40" ry="21" fill="#fce4f5" stroke="#e8a0d0" stroke-width="1.5"/>
+    <!-- Neck -->
+    <polygon points="100,53 106,30 120,36 114,58" fill="#fce4f5" stroke="#e8a0d0" stroke-width="1.5"/>
+    <!-- Head -->
+    <ellipse cx="116" cy="32" rx="13" ry="10" fill="#fce4f5" stroke="#e8a0d0" stroke-width="1.5"/>
+    <!-- Snout -->
+    <ellipse cx="126" cy="35" rx="5" ry="4" fill="#f0b8d8"/>
+    <circle cx="127" cy="36" r="1.5" fill="#d090b0"/>
+    <circle cx="125" cy="36" r="1.5" fill="#d090b0"/>
+    <!-- Horn -->
+    <polygon points="113,22 119,6 116,23" fill="#ffd700" stroke="#ffa000" stroke-width="1"/>
+    <!-- Eye -->
+    <circle cx="120" cy="29" r="2.5" fill="#222"/>
+    <circle cx="121" cy="28" r="0.8" fill="white"/>
+    <!-- Mane strands -->
+    <path d="M107,22 C101,14 97,8 95,4" stroke="#ff69b4" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M110,26 C104,18 100,12 98,8" stroke="#c77dff" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M112,30 C107,22 103,16 101,12" stroke="#ffd700" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Back legs (closer to rear) -->
+    <rect x="50" y="83" width="10" height="17" rx="4" fill="#f0b8d8" stroke="#e8a0d0" stroke-width="1"/>
+    <rect x="63" y="83" width="10" height="17" rx="4" fill="#f0b8d8" stroke="#e8a0d0" stroke-width="1"/>
+    <!-- Front legs (closer to head) -->
+    <rect x="84" y="83" width="10" height="17" rx="4" fill="#f0b8d8" stroke="#e8a0d0" stroke-width="1"/>
+    <rect x="97" y="83" width="10" height="17" rx="4" fill="#f0b8d8" stroke="#e8a0d0" stroke-width="1"/>
+  </svg></div>
   <script>
     (function () {
       const unicorn = document.getElementById('unicorn-runner');
@@ -651,8 +680,8 @@
         const size = 10 + Math.random() * 22;
         bubble.style.width  = size + 'px';
         bubble.style.height = size + 'px';
-        bubble.style.left   = (x + 10 + (Math.random() * 24 - 12)) + 'px';
-        bubble.style.bottom = (36 + Math.random() * 30) + 'px';
+        bubble.style.left   = (x + 30 + (Math.random() * 20 - 10)) + 'px';
+        bubble.style.bottom = (32 + Math.random() * 25) + 'px';
         bubble.style.background = fartColors[Math.floor(Math.random() * fartColors.length)];
         document.body.appendChild(bubble);
         setTimeout(() => bubble.remove(), 1500);

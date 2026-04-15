@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scatterplot czasów realizacji</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      text-align: center;
+      color: #666;
+      margin-top: 0;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .chart-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 32px 40px;
+    }
+    .stat-controls {
+      max-width: 960px;
+      margin: 16px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      justify-content: center;
+    }
+    .stat-controls label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #444;
+      cursor: pointer;
+      user-select: none;
+    }
+    .stat-controls input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+    .stat-swatch {
+      display: inline-block;
+      width: 24px;
+      height: 3px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scatterplot czasów realizacji</h1>
+  <p class="subtitle">Czasy realizacji zadań w czasie według rozmiaru (S / M / L)</p>
+
+  <div class="chart-container">
+    <canvas id="scatterplot"></canvas>
+  </div>
+
+  <div class="stat-controls">
+    <label>
+      <input type="checkbox" id="toggle-p50" checked>
+      <span class="stat-swatch" style="background:#1e88e5;"></span>
+      50. percentyl (mediana): <span id="val-p50">–</span> dni
+    </label>
+    <label>
+      <input type="checkbox" id="toggle-p85" checked>
+      <span class="stat-swatch" style="background:#fb8c00;"></span>
+      85. percentyl: <span id="val-p85">–</span> dni
+    </label>
+    <label>
+      <input type="checkbox" id="toggle-p95" checked>
+      <span class="stat-swatch" style="background:#8e24aa;"></span>
+      95. percentyl: <span id="val-p95">–</span> dni
+    </label>
+  </div>
+
+  <script>
+    // Dane z pliku "2. Scatterplot czasów realizacji.csv"
+    const rawData = [
+      { date: '2024-07-15', size: 'S', time: 49 },
+      { date: '2024-08-22', size: 'S', time: 48 },
+      { date: '2024-09-10', size: 'S', time: 87 },
+      { date: '2024-09-25', size: 'M', time: 57 },
+      { date: '2024-10-05', size: 'M', time: 148 },
+      { date: '2024-10-14', size: 'S', time: 53 },
+      { date: '2024-10-28', size: 'S', time: 45 },
+      { date: '2024-11-18', size: 'M', time: 145 },
+      { date: '2024-12-04', size: 'L', time: 105 },
+      { date: '2025-01-08', size: 'S', time: 5 },
+      { date: '2025-01-20', size: 'L', time: 163 },
+      { date: '2025-02-14', size: 'S', time: 43 },
+      { date: '2025-02-26', size: 'M', time: 415 },
+      { date: '2025-03-15', size: 'L', time: 123 },
+      { date: '2025-04-10', size: 'M', time: 103 },
+      { date: '2025-05-05', size: 'L', time: 104 },
+      { date: '2025-06-12', size: 'L', time: 302 },
+      { date: '2025-06-25', size: 'L', time: 158 },
+      { date: '2025-07-02', size: 'L', time: 98 },
+      { date: '2025-07-11', size: 'S', time: 52 },
+      { date: '2025-07-18', size: 'M', time: 95 },
+      { date: '2025-07-29', size: 'S', time: 70 },
+      { date: '2025-08-03', size: 'M', time: 95 },
+      { date: '2025-08-14', size: 'M', time: 101 },
+      { date: '2025-08-21', size: 'M', time: 57 },
+      { date: '2025-08-29', size: 'M', time: 57 },
+      { date: '2025-09-08', size: 'S', time: 53 },
+      { date: '2025-09-22', size: 'L', time: 137 },
+      { date: '2025-10-04', size: 'S', time: 73 },
+      { date: '2025-10-12', size: 'M', time: 60 },
+      { date: '2025-10-19', size: 'S', time: 126 },
+      { date: '2025-10-27', size: 'M', time: 57 },
+      { date: '2025-11-05', size: 'L', time: 124 },
+      { date: '2025-11-15', size: 'M', time: 75 },
+      { date: '2025-11-25', size: 'M', time: 89 },
+      { date: '2025-12-10', size: 'S', time: 44 },
+    ];
+
+    const sizes = ['S', 'M', 'L'];
+    const colors = {
+      S: 'rgba(54, 162, 235, 0.85)',
+      M: 'rgba(255, 159, 64, 0.85)',
+      L: 'rgba(75, 192, 100, 0.85)',
+    };
+    const borders = {
+      S: 'rgba(54, 162, 235, 1)',
+      M: 'rgba(255, 159, 64, 1)',
+      L: 'rgba(75, 192, 100, 1)',
+    };
+
+    function calcPercentile(sorted, p) {
+      if (sorted.length === 0) return 0;
+      const idx = (p / 100) * (sorted.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+    }
+
+    const allTimes = rawData.map(d => d.time).sort((a, b) => a - b);
+    const p50 = calcPercentile(allTimes, 50);
+    const p85 = calcPercentile(allTimes, 85);
+    const p95 = calcPercentile(allTimes, 95);
+
+    document.getElementById('val-p50').textContent = p50.toFixed(1);
+    document.getElementById('val-p85').textContent = p85.toFixed(1);
+    document.getElementById('val-p95').textContent = p95.toFixed(1);
+
+    const datasets = sizes.map(size => ({
+      label: 'Rozmiar ' + size,
+      data: rawData
+        .filter(d => d.size === size)
+        .map(d => ({ x: d.date, y: d.time })),
+      backgroundColor: colors[size],
+      borderColor: borders[size],
+      borderWidth: 1.5,
+      pointRadius: 7,
+      pointHoverRadius: 9,
+    }));
+
+    const statAnnotations = {
+      p50: {
+        display: true,
+        type: 'line',
+        yMin: p50, yMax: p50,
+        borderColor: '#1e88e5',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        label: {
+          display: true,
+          content: 'P50: ' + p50.toFixed(1) + ' dni',
+          position: 'end',
+          yAdjust: -10,
+          backgroundColor: 'rgba(30,136,229,0.12)',
+          color: '#1565c0',
+          font: { size: 11, weight: 'bold' },
+          padding: 4,
+        },
+      },
+      p85: {
+        display: true,
+        type: 'line',
+        yMin: p85, yMax: p85,
+        borderColor: '#fb8c00',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        label: {
+          display: true,
+          content: 'P85: ' + p85.toFixed(1) + ' dni',
+          position: 'end',
+          yAdjust: -10,
+          backgroundColor: 'rgba(251,140,0,0.12)',
+          color: '#e65100',
+          font: { size: 11, weight: 'bold' },
+          padding: 4,
+        },
+      },
+      p95: {
+        display: true,
+        type: 'line',
+        yMin: p95, yMax: p95,
+        borderColor: '#8e24aa',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        label: {
+          display: true,
+          content: 'P95: ' + p95.toFixed(1) + ' dni',
+          position: 'end',
+          yAdjust: -10,
+          backgroundColor: 'rgba(142,36,170,0.12)',
+          color: '#6a1b9a',
+          font: { size: 11, weight: 'bold' },
+          padding: 4,
+        },
+      },
+    };
+
+    const ctx = document.getElementById('scatterplot').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: item => {
+                const d = rawData.filter(r => r.size === item.dataset.label.replace('Rozmiar ', ''))
+                  .find(r => r.date === item.raw.x && r.time === item.raw.y);
+                const dateStr = d ? d.date : item.raw.x;
+                return ' ' + item.dataset.label + ' | Data: ' + dateStr + ' | Czas: ' + item.raw.y + ' dni';
+              },
+            },
+          },
+          annotation: {
+            annotations: statAnnotations,
+          },
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'month',
+              tooltipFormat: 'yyyy-MM-dd',
+              displayFormats: { month: 'MMM yyyy' },
+            },
+            title: { display: true, text: 'Data ukończenia', font: { size: 13 } },
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Czas realizacji (dni)', font: { size: 13 } },
+          },
+        },
+      },
+    });
+
+    ['p50', 'p85', 'p95'].forEach(id => {
+      document.getElementById('toggle-' + id).addEventListener('change', function () {
+        chart.options.plugins.annotation.annotations[id].display = this.checked;
+        chart.update();
+      });
+    });
+  </script>
+</body>
+</html>

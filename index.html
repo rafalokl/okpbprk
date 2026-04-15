@@ -67,6 +67,10 @@
       cursor: pointer;
     }
     .stat-toggles input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
     .stat-controls {
       max-width: 860px;
       margin: 16px auto 0;
@@ -130,6 +134,7 @@
       font-size: 13px;
       color: #2a7a2a;
       margin-top: 6px;
+    }
     .stat-swatch {
       display: inline-block;
       width: 24px;
@@ -137,11 +142,40 @@
       border-radius: 2px;
       flex-shrink: 0;
     }
+    .unicorn-banner {
+      text-align: center;
+      margin: 0 auto 24px auto;
+      max-width: 860px;
+      background: linear-gradient(135deg, #ffe0f0, #ffc0e0, #ffb3d9);
+      border-radius: 10px;
+      padding: 12px 20px;
+      box-shadow: 0 2px 12px rgba(255,105,180,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .unicorn {
+      font-size: 28px;
+      filter: hue-rotate(300deg) saturate(2);
+    }
+    .unicorn-text {
+      font-size: 16px;
+      font-weight: bold;
+      color: #c2185b;
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
   <h1>Histogram czasów realizacji</h1>
   <p class="subtitle">Rozkład czasów realizacji zadań według rozmiaru (S / M / L)</p>
+
+  <div class="unicorn-banner">
+    <span class="unicorn">🦄</span>
+    <span class="unicorn-text">Różowy Jednorożec</span>
+    <span class="unicorn">🦄</span>
+  </div>
 
   <div class="controls">
     <section>
@@ -150,22 +184,22 @@
         <label>
           <input type="checkbox" id="showMean" checked>
           <span class="color-dot" style="background:#e74c3c;"></span>
-          Średnia
+          Średnia (<span id="val-mean">–</span> dni)
         </label>
         <label>
           <input type="checkbox" id="showMedian" checked>
           <span class="color-dot" style="background:#8e44ad;"></span>
-          Mediana
+          Mediana (<span id="val-median">–</span> dni)
         </label>
         <label>
           <input type="checkbox" id="showP85" checked>
           <span class="color-dot" style="background:#e67e22;background:repeating-linear-gradient(90deg,#e67e22 0,#e67e22 5px,transparent 5px,transparent 10px);height:3px;"></span>
-          85. percentyl
+          85. percentyl (<span id="val-p85">–</span> dni)
         </label>
         <label>
           <input type="checkbox" id="showP95" checked>
           <span class="color-dot" style="background:#16a085;"></span>
-          95. percentyl
+          95. percentyl (<span id="val-p95">–</span> dni)
         </label>
       </div>
     </section>
@@ -188,28 +222,6 @@
 
   <div class="chart-container">
     <canvas id="histogram"></canvas>
-  </div>
-  <div class="stat-controls">
-    <label>
-      <input type="checkbox" id="toggle-mean" checked>
-      <span class="stat-swatch" style="background:#e53935;"></span>
-      Średnia (<span id="val-mean">–</span> dni)
-    </label>
-    <label>
-      <input type="checkbox" id="toggle-median" checked>
-      <span class="stat-swatch" style="background:#1e88e5;"></span>
-      Mediana (<span id="val-median">–</span> dni)
-    </label>
-    <label>
-      <input type="checkbox" id="toggle-p85" checked>
-      <span class="stat-swatch" style="background:#fb8c00;"></span>
-      85. percentyl (<span id="val-p85">–</span> dni)
-    </label>
-    <label>
-      <input type="checkbox" id="toggle-p95" checked>
-      <span class="stat-swatch" style="background:#8e24aa;"></span>
-      95. percentyl (<span id="val-p95">–</span> dni)
-    </label>
   </div>
 
   <script>
@@ -393,76 +405,15 @@
     }
 
     // Przeliczenie wartości (dni) na pozycję osi X histogramu (float index)
-    function valueToX(value, binsArr) {
-      for (let i = 0; i < binsArr.length; i++) {
-        const b = binsArr[i];
-        if (value >= b.min && value < b.max + 1) {
-          const binWidth = b.max + 1 - b.min;
-          return i + (value - b.min) / binWidth - 0.5;
-        }
-      }
-      if (value < binsArr[0].min) return -0.5;
-      return binsArr.length - 0.5;
+    function updateStats() {
+      const s = calcStats(rawData);
+      document.getElementById('val-mean').textContent   = s.mean.toFixed(1);
+      document.getElementById('val-median').textContent = s.median.toFixed(1);
+      document.getElementById('val-p85').textContent    = s.p85.toFixed(1);
+      document.getElementById('val-p95').textContent    = s.p95.toFixed(1);
     }
 
-    const stats = calcStats(rawData);
-
-    // Aktualizacja etykiet w kontrolkach
-    document.getElementById('val-mean').textContent   = stats.mean.toFixed(1);
-    document.getElementById('val-median').textContent = stats.median.toFixed(1);
-    document.getElementById('val-p85').textContent    = stats.p85.toFixed(1);
-    document.getElementById('val-p95').textContent    = stats.p95.toFixed(1);
-
-    const statAnnotations = {
-      mean: {
-        display: true,
-        type: 'line', scaleID: 'x', value: valueToX(stats.mean, bins),
-        borderColor: '#e53935', borderWidth: 2, borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'Śr. ' + stats.mean.toFixed(1) + ' d',
-          position: 'start', yAdjust: -6,
-          backgroundColor: 'rgba(229,57,53,0.15)', color: '#c62828',
-          font: { size: 11, weight: 'bold' },
-        },
-      },
-      median: {
-        display: true,
-        type: 'line', scaleID: 'x', value: valueToX(stats.median, bins),
-        borderColor: '#1e88e5', borderWidth: 2, borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'Med. ' + stats.median.toFixed(1) + ' d',
-          position: 'start', yAdjust: -22,
-          backgroundColor: 'rgba(30,136,229,0.15)', color: '#1565c0',
-          font: { size: 11, weight: 'bold' },
-        },
-      },
-      p85: {
-        display: true,
-        type: 'line', scaleID: 'x', value: valueToX(stats.p85, bins),
-        borderColor: '#fb8c00', borderWidth: 2, borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'P85 ' + stats.p85.toFixed(1) + ' d',
-          position: 'start', yAdjust: -38,
-          backgroundColor: 'rgba(251,140,0,0.15)', color: '#e65100',
-          font: { size: 11, weight: 'bold' },
-        },
-      },
-      p95: {
-        display: true,
-        type: 'line', scaleID: 'x', value: valueToX(stats.p95, bins),
-        borderColor: '#8e24aa', borderWidth: 2, borderDash: [6, 4],
-        label: {
-          display: true,
-          content: 'P95 ' + stats.p95.toFixed(1) + ' d',
-          position: 'start', yAdjust: -54,
-          backgroundColor: 'rgba(142,36,170,0.15)', color: '#6a1b9a',
-          font: { size: 11, weight: 'bold' },
-        },
-      },
-    };
+    updateStats();
 
     const ctx = document.getElementById('histogram').getContext('2d');
     const chart = new Chart(ctx, {
@@ -483,7 +434,6 @@
           },
           annotation: {
             annotations: buildAnnotations(rawData),
-            annotations: statAnnotations,
           },
         },
         scales: {
@@ -505,6 +455,7 @@
       chart.data.datasets = buildDatasets(rawData);
       chart.options.plugins.annotation.annotations = buildAnnotations(rawData);
       chart.update();
+      updateStats();
     }
 
     // Obsługa checkboxów
@@ -536,12 +487,6 @@
     // Umożliwia zatwierdzenie formularza klawiszem Enter
     document.getElementById('newTime').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') { e.preventDefault(); addDataPoint(); }
-    // Obsługa przełączników widoczności linii
-    ['mean', 'median', 'p85', 'p95'].forEach(id => {
-      document.getElementById('toggle-' + id).addEventListener('change', function () {
-        chart.options.plugins.annotation.annotations[id].display = this.checked;
-        chart.update();
-      });
     });
   </script>
 </body>

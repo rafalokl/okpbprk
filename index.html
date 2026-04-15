@@ -147,12 +147,14 @@
     <section>
       <h2>Dodaj zadanie ręcznie</h2>
       <div class="add-data-form">
-        <select id="newSize" title="Rozmiar zadania">
+        <label for="newSize">Rozmiar:</label>
+        <select id="newSize">
           <option value="S">S</option>
           <option value="M">M</option>
           <option value="L">L</option>
         </select>
-        <input type="number" id="newTime" placeholder="Czas realizacji (dni)" min="1" title="Czas realizacji w dniach">
+        <label for="newTime">Czas (dni):</label>
+        <input type="number" id="newTime" placeholder="np. 75" min="1">
         <button onclick="addDataPoint()">Dodaj</button>
       </div>
       <div id="addStatus"></div>
@@ -197,7 +199,8 @@
     const colors  = { S: 'rgba(54,162,235,0.8)',  M: 'rgba(255,159,64,0.8)',  L: 'rgba(75,192,100,0.8)' };
     const borders = { S: 'rgba(54,162,235,1)',     M: 'rgba(255,159,64,1)',    L: 'rgba(75,192,100,1)'   };
 
-    // Obliczenia statystyczne
+    const STATUS_COLOR_ERROR = '#c0392b';
+    const STATUS_COLOR_OK    = '#2a7a2a';
     function calcMean(data) {
       if (data.length === 0) return 0;
       return data.reduce((s, d) => s + d.time, 0) / data.length;
@@ -380,7 +383,7 @@
       const time = parseInt(timeEl.value, 10);
 
       if (!timeEl.value || isNaN(time) || time < 1) {
-        statusEl.style.color = '#c0392b';
+        statusEl.style.color = STATUS_COLOR_ERROR;
         statusEl.textContent = 'Podaj prawidłowy czas realizacji (liczba ≥ 1).';
         return;
       }
@@ -388,14 +391,14 @@
       rawData.push({ size: sizeEl.value, time: time });
       updateChart();
 
-      statusEl.style.color = '#2a7a2a';
+      statusEl.style.color = STATUS_COLOR_OK;
       statusEl.textContent = 'Dodano: rozmiar ' + sizeEl.value + ', czas ' + time + ' dni. Łącznie: ' + rawData.length + ' zadań.';
       timeEl.value = '';
     }
 
     // Umożliwia zatwierdzenie formularza klawiszem Enter
     document.getElementById('newTime').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') addDataPoint();
+      if (e.key === 'Enter') { e.preventDefault(); addDataPoint(); }
     });
   </script>
 </body>

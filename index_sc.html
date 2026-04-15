@@ -192,6 +192,33 @@
       background: #f0f4ff;
       border: 1px solid #d0d8f0;
     }
+
+    /* Unicorn runner */
+    #unicorn-runner {
+      position: fixed;
+      bottom: 36px;
+      font-size: 52px;
+      z-index: 9999;
+      pointer-events: none;
+      user-select: none;
+      animation: unicorn-bob 0.35s ease-in-out infinite alternate;
+    }
+    @keyframes unicorn-bob {
+      from { transform: scaleX(-1) translateY(0px);  }
+      to   { transform: scaleX(-1) translateY(-8px); }
+    }
+    .fart-bubble {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.85;
+      animation: fart-float 1.4s ease-out forwards;
+    }
+    @keyframes fart-float {
+      0%   { opacity: 0.85; transform: scale(1)   translateY(0px);   }
+      100% { opacity: 0;    transform: scale(2.2) translateY(-90px); }
+    }
   </style>
 </head>
 <body>
@@ -601,6 +628,53 @@
 
     // Initial render of stat cards
     updateStatCards();
+  </script>
+
+  <!-- Unicorn running across the page and releasing colorful farts -->
+  <div id="unicorn-runner">🦄</div>
+  <script>
+    (function () {
+      const unicorn = document.getElementById('unicorn-runner');
+      const fartColors = [
+        '#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff',
+        '#ff6bff', '#ff9a3c', '#a0e7e5', '#c77dff',
+        '#80ffdb', '#f72585',
+      ];
+
+      let x = -100;
+      const speed = 2.8;
+      let frameCount = 0;
+
+      function spawnFart() {
+        const bubble = document.createElement('div');
+        bubble.className = 'fart-bubble';
+        const size = 10 + Math.random() * 22;
+        bubble.style.width  = size + 'px';
+        bubble.style.height = size + 'px';
+        bubble.style.left   = (x + 10 + (Math.random() * 24 - 12)) + 'px';
+        bubble.style.bottom = (36 + Math.random() * 30) + 'px';
+        bubble.style.background = fartColors[Math.floor(Math.random() * fartColors.length)];
+        document.body.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 1500);
+      }
+
+      function animate() {
+        x += speed;
+        if (x > window.innerWidth + 120) x = -120;
+        unicorn.style.left = x + 'px';
+
+        frameCount++;
+        if (frameCount % 12 === 0) {
+          spawnFart();
+          if (Math.random() < 0.6) spawnFart();
+          if (Math.random() < 0.25) spawnFart();
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    }());
   </script>
 </body>
 </html>

@@ -485,7 +485,13 @@ function spawnFart() {
 (function loadChartJS() {
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-  s.onload = () => { runSimulation(); };
+  s.onload = () => {
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js';
+    s2.onload = () => { Chart.register(window['chartjs-plugin-annotation']); runSimulation(); };
+    s2.onerror = () => { runSimulation(); }; // graceful fallback
+    document.head.appendChild(s2);
+  };
   document.head.appendChild(s);
 })();
 

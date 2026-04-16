@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epic Delivery Forecast – Monte Carlo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+  position: relative;
+  z-index: 10;
+}
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: #f472b6;
+  text-shadow: 0 0 20px rgba(244,114,182,0.5);
+}
+.subtitle {
+  text-align: center;
+  color: #94a3b8;
+  margin-bottom: 30px;
+  font-size: 0.95rem;
+}
+.section {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 20px 28px;
+  margin-bottom: 24px;
+}
+.section h2 {
+  font-size: 1rem;
+  color: #f472b6;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.params-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px 24px;
+}
+.param-field { display: flex; flex-direction: column; gap: 5px; }
+.param-field label {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+input[type="date"], input[type="number"], input[type="text"], select {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus, select:focus {
+  border-color: #f472b6;
+}
+
+/* Epics table */
+.epics-table-wrap { overflow-x: auto; }
+table.epics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.epics-table th {
+  background: rgba(244,114,182,0.15);
+  color: #f472b6;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.epics-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: middle;
+}
+.epics-table tr:hover td { background: rgba(255,255,255,0.04); }
+.epics-table input { padding: 6px 10px; font-size: 0.88rem; }
+.btn {
+  display: inline-block;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-add {
+  background: linear-gradient(135deg, #f472b6, #ec4899);
+  color: #fff;
+  margin-top: 10px;
+}
+.btn-del {
+  background: rgba(239,68,68,0.25);
+  color: #fca5a5;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+/* Monthly capacity */
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.month-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.month-card label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.month-card select { font-size: 0.85rem; padding: 5px 8px; }
+
+/* Results */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+.epic-result-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.epic-result-card h3 {
+  font-size: 0.95rem;
+  color: #f472b6;
+  margin-bottom: 10px;
+}
+.percentile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.88rem;
+}
+.percentile-row:last-child { border-bottom: none; }
+.percentile-label { color: #94a3b8; }
+.percentile-value { font-weight: 700; color: #86efac; }
+.percentile-value.p85 { color: #fde68a; }
+.percentile-value.p95 { color: #f87171; }
+
+/* Summary bar */
+.summary-bar {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.summary-stat {
+  background: rgba(244,114,182,0.12);
+  border: 1px solid rgba(244,114,182,0.25);
+  border-radius: 8px;
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.summary-stat .label { font-size: 0.78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+.summary-stat .value { font-size: 1.25rem; font-weight: 700; color: #f472b6; }
+
+/* Easter egg overlay */
+#kaczynski-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+}
+#kaczynski-overlay.active { display: flex; }
+#kaczynski-face {
+  font-size: 12rem;
+  animation: rofl 0.4s infinite alternate;
+  filter: drop-shadow(0 0 40px rgba(255,200,0,0.8));
+  user-select: none;
+}
+@keyframes rofl {
+  from { transform: rotate(-8deg) scale(1); }
+  to   { transform: rotate(8deg) scale(1.08); }
+}
+#kaczynski-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  pointer-events: none;
+}
+#kaczynski-label {
+  position: absolute;
+  bottom: 30%;
+  color: #fde68a;
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-shadow: 0 0 15px rgba(255,200,0,0.9);
+  letter-spacing: 0.06em;
+  text-align: center;
+  animation: pulse-label 0.7s infinite alternate;
+}
+@keyframes pulse-label {
+  from { opacity: 0.7; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1.05); }
+}
+
+.velocity-hint { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+.no-data-note { color: #64748b; font-size: 0.9rem; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<!-- Easter egg overlay -->
+<div id="kaczynski-overlay">
+  <div id="kaczynski-face">😂</div>
+  <div id="kaczynski-label">SKUPIENIE PONIŻEJ 75%!<br>Rechocząca twarz Jarosława Kaczyńskiego</div>
+</div>
+
+<div class="container">
+  <h1>🚀 Epic Delivery Forecast</h1>
+  <p class="subtitle">Prognozowanie dostarczenia epików metodą Monte Carlo (percentyle 85 i 95)</p>
+
+  <!-- Section 1: General params -->
+  <div class="section">
+    <h2>⚙️ Parametry ogólne</h2>
+    <div class="params-grid">
+      <div class="param-field">
+        <label>Data startu prognozowania</label>
+        <input type="date" id="startDate">
+      </div>
+      <div class="param-field">
+        <label>Oczekiwana data zakończenia</label>
+        <input type="date" id="endDate">
+      </div>
+      <div class="param-field">
+        <label>Skupienie zespołu (%)</label>
+        <select id="focusScale">
+          <option value="100">100% – pełne skupienie</option>
+          <option value="75">75% – lekkie rozproszenie</option>
+          <option value="50">50% – połowa mocy</option>
+          <option value="25">25% – minimalne skupienie</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Długość okresu (dni roboczych)</label>
+        <input type="number" id="periodDays" value="10" min="1" max="30">
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Velocity data -->
+  <div class="section">
+    <h2>📈 Historyczne tempo dostarczania (historyjek / okres)</h2>
+    <div class="param-field">
+      <label>Wartości tempa (oddziel przecinkami)</label>
+      <input type="text" id="velocityInput" placeholder="np. 12, 15, 9, 18, 11, 14, 10, 16">
+      <span class="velocity-hint">Podaj ile historyjek zostało dostarczone w każdym z minimalnych/maksymalnych 2-tygodniowych sprintów. Możesz dodawać kolejne wartości po przecinku.</span>
+    </div>
+  </div>
+
+  <!-- Section 3: Epics table -->
+  <div class="section">
+    <h2>📋 Epiki – estymacje</h2>
+    <div class="epics-table-wrap">
+      <table class="epics-table" id="epicsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nazwa epiku</th>
+            <th>Est. minimalna (historyjki)</th>
+            <th>Est. maksymalna (historyjki)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="epicsBody">
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-add" id="addEpicBtn">+ Dodaj epik</button>
+  </div>
+
+  <!-- Section 4: Monthly capacity -->
+  <div class="section">
+    <h2>📅 Miesięczne capacity zespołu</h2>
+    <p class="velocity-hint" style="margin-bottom:14px;">Zaznacz miesiące, w których zespół nie będzie pracował z pełną zdolnością dostarczania.</p>
+    <div class="months-grid" id="monthsGrid"></div>
+  </div>
+
+  <!-- Section 5: Results -->
+  <div class="section" id="resultsSection">
+    <h2>📊 Wyniki prognozowania</h2>
+    <div class="summary-bar" id="summaryBar"></div>
+    <div class="results-grid" id="resultsGrid">
+      <p class="no-data-note">Wprowadź dane, aby zobaczyć prognozy.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- State ----
+let epicCount = 0;
+
+// ---- Init ----
+(function init() {
+  const today = new Date();
+  document.getElementById('startDate').value = toDateStr(today);
+  const endDefault = new Date(today);
+  endDefault.setMonth(endDefault.getMonth() + 6);
+  document.getElementById('endDate').value = toDateStr(endDefault);
+
+  // Add 10 epics by default
+  for (let i = 0; i < 10; i++) addEpic();
+
+  buildMonthsGrid();
+  attachListeners();
+  calculate();
+})();
+
+function toDateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+// ---- Epics ----
+function addEpic() {
+  epicCount++;
+  const tbody = document.getElementById('epicsBody');
+  const tr = document.createElement('tr');
+  tr.dataset.id = epicCount;
+  tr.innerHTML = `
+    <td style="color:#94a3b8;font-weight:600;">${epicCount}</td>
+    <td><input type="text" placeholder="Epik ${epicCount}" value="Epik ${epicCount}" style="width:140px;" class="epic-name"></td>
+    <td><input type="number" min="0" value="" placeholder="min" class="epic-min" style="width:90px;"></td>
+    <td><input type="number" min="0" value="" placeholder="max" class="epic-max" style="width:90px;"></td>
+    <td><button class="btn btn-del" onclick="removeEpic(this)">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', debounce(calculate, 300)));
+}
+
+function removeEpic(btn) {
+  btn.closest('tr').remove();
+  calculate();
+}
+
+document.getElementById('addEpicBtn').addEventListener('click', () => { addEpic(); calculate(); });
+
+// ---- Months grid ----
+function buildMonthsGrid() {
+  const start = new Date(document.getElementById('startDate').value || new Date());
+  const end   = new Date(document.getElementById('endDate').value   || new Date());
+  end.setMonth(end.getMonth() + 1);
+
+  const grid = document.getElementById('monthsGrid');
+  grid.innerHTML = '';
+
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endM = new Date(end.getFullYear(), end.getMonth(), 1);
+  const monthNames = ['Sty','Lut','Mar','Kwi','Maj','Cze','Lip','Sie','Wrz','Paź','Lis','Gru'];
+
+  // Save existing values
+  const existing = {};
+  grid.querySelectorAll('.month-card').forEach(card => {
+    existing[card.dataset.key] = card.querySelector('select').value;
+  });
+
+  while (cur <= endM) {
+    const key = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}`;
+    const label = `${monthNames[cur.getMonth()]} ${cur.getFullYear()}`;
+    const card = document.createElement('div');
+    card.className = 'month-card';
+    card.dataset.key = key;
+    const savedVal = existing[key] || '100';
+    card.innerHTML = `
+      <label>${label}</label>
+      <select class="month-cap" data-key="${key}">
+        <option value="100" ${savedVal==='100'?'selected':''}>100%</option>
+        <option value="75"  ${savedVal==='75' ?'selected':''}>75%</option>
+        <option value="50"  ${savedVal==='50' ?'selected':''}>50%</option>
+        <option value="25"  ${savedVal==='25' ?'selected':''}>25%</option>
+      </select>
+    `;
+    card.querySelector('select').addEventListener('change', debounce(calculate, 200));
+    grid.appendChild(card);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+}
+
+// ---- Attach listeners ----
+function attachListeners() {
+  ['startDate','endDate','focusScale','velocityInput','periodDays'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      buildMonthsGrid();
+      debounce(calculate, 300)();
+    });
+    document.getElementById(id).addEventListener('change', () => {
+      buildMonthsGrid();
+      calculate();
+    });
+  });
+}
+
+// ---- Easter egg ----
+function updateEasterEgg(focusPct) {
+  const overlay = document.getElementById('kaczynski-overlay');
+  if (focusPct < 75) {
+    overlay.classList.add('active');
+  } else {
+    overlay.classList.remove('active');
+  }
+}
+
+// ---- Monte Carlo ----
+function parseVelocities() {
+  const raw = document.getElementById('velocityInput').value;
+  return raw.split(',')
+    .map(s => parseFloat(s.trim()))
+    .filter(v => !isNaN(v) && v > 0);
+}
+
+function getEpics() {
+  const rows = document.querySelectorAll('#epicsBody tr');
+  return Array.from(rows).map(tr => ({
+    name: tr.querySelector('.epic-name')?.value || '',
+    min:  parseFloat(tr.querySelector('.epic-min')?.value) || 0,
+    max:  parseFloat(tr.querySelector('.epic-max')?.value) || 0,
+  })).filter(e => e.min > 0 || e.max > 0);
+}
+
+function getMonthCapacities() {
+  const caps = {};
+  document.querySelectorAll('.month-cap').forEach(sel => {
+    caps[sel.dataset.key] = parseInt(sel.value) / 100;
+  });
+  return caps;
+}
+
+// Effective velocity per period considering focus and monthly capacity
+function buildEffectivePeriods(startDate, endDate, velocitySamples, focusPct, periodDays, monthCaps) {
+  // Build list of periods with their effective multiplier
+  const periods = [];
+  let cursor = new Date(startDate);
+  const end = new Date(endDate);
+  const focus = focusPct / 100;
+
+  while (cursor < end) {
+    const periodEnd = new Date(cursor);
+    // advance by periodDays working days approx (we use calendar days * 5/7)
+    periodEnd.setDate(periodEnd.getDate() + Math.round(periodDays * 7 / 5));
+
+    const key = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}`;
+    const monthCap = monthCaps[key] !== undefined ? monthCaps[key] : 1.0;
+
+    periods.push({ cap: monthCap * focus });
+    cursor = new Date(periodEnd);
+  }
+  return periods;
+}
+
+function monteCarloPeriods(stories, velocitySamples, periods, iterations) {
+  // For each iteration, simulate delivery
+  const SIMS = iterations || 10000;
+  const results = new Array(SIMS);
+  const vLen = velocitySamples.length;
+
+  for (let i = 0; i < SIMS; i++) {
+    let remaining = stories;
+    let periodsNeeded = 0;
+
+    for (let p = 0; p < periods.length && remaining > 0; p++) {
+      const v = velocitySamples[Math.floor(Math.random() * vLen)];
+      const effective = v * periods[p].cap;
+      remaining -= effective;
+      periodsNeeded++;
+    }
+    // If not finished within periods range, extrapolate
+    if (remaining > 0) {
+      // Use average effective cap beyond
+      const avgCap = periods.length > 0 ? periods.reduce((s,p) => s+p.cap, 0)/periods.length : 1;
+      const avgV = velocitySamples.reduce((a,b)=>a+b,0)/vLen * avgCap;
+      periodsNeeded += remaining / avgV;
+    }
+    results[i] = periodsNeeded;
+  }
+  results.sort((a,b) => a-b);
+  return results;
+}
+
+function percentile(sorted, p) {
+  const idx = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, Math.min(idx, sorted.length-1))];
+}
+
+function periodsToDate(startDate, periodDays, numPeriods) {
+  const d = new Date(startDate);
+  const calDays = numPeriods * Math.round(periodDays * 7 / 5);
+  d.setDate(d.getDate() + Math.round(calDays));
+  return d;
+}
+
+function formatDate(d) {
+  if (!(d instanceof Date) || isNaN(d)) return '—';
+  return d.toLocaleDateString('pl-PL', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ---- Calculate ----
+function calculate() {
+  const startVal = document.getElementById('startDate').value;
+  const endVal   = document.getElementById('endDate').value;
+  const focusPct = parseInt(document.getElementById('focusScale').value);
+  const periodDays = parseInt(document.getElementById('periodDays').value) || 10;
+  const velocities = parseVelocities();
+  const epics = getEpics();
+  const monthCaps = getMonthCapacities();
+
+  updateEasterEgg(focusPct);
+
+  const summaryBar = document.getElementById('summaryBar');
+  const resultsGrid = document.getElementById('resultsGrid');
+
+  if (!startVal || velocities.length === 0 || epics.length === 0) {
+    summaryBar.innerHTML = '';
+    resultsGrid.innerHTML = '<p class="no-data-note">Wprowadź datę startu, tempo dostarczania i dane epików, aby zobaczyć prognozy.</p>';
+    return;
+  }
+
+  const startDate = new Date(startVal);
+  const endDate   = endVal ? new Date(endVal) : new Date(startVal);
+  if (!endVal) endDate.setFullYear(endDate.getFullYear() + 2);
+
+  const periods = buildEffectivePeriods(startDate, endDate, velocities, focusPct, periodDays, monthCaps);
+  if (periods.length === 0) {
+    resultsGrid.innerHTML = '<p class="no-data-note">Zakres dat jest zbyt wąski lub nie ma miesięcy do prognozowania.</p>';
+    return;
+  }
+
+  const ITERS = 10000;
+
+  // Simulate for each epic separately + cumulative (sum of all epics)
+  const epicResults = epics.map(epic => {
+    if (epic.min === 0 && epic.max === 0) return null;
+    const minStories = epic.min || epic.max;
+    const maxStories = epic.max || epic.min;
+
+    // Run MC for min estimate
+    const simMin = monteCarloPeriods(minStories, velocities, periods, ITERS);
+    // Run MC for max estimate
+    const simMax = monteCarloPeriods(maxStories, velocities, periods, ITERS);
+
+    return {
+      name: epic.name,
+      min: {
+        p85: percentile(simMin, 85),
+        p95: percentile(simMin, 95),
+      },
+      max: {
+        p85: percentile(simMax, 85),
+        p95: percentile(simMax, 95),
+      },
+    };
+  }).filter(Boolean);
+
+  if (epicResults.length === 0) {
+    resultsGrid.innerHTML = '<p class="no-data-note">Podaj estymacje dla przynajmniej jednego epiku.</p>';
+    return;
+  }
+
+  // Total (sum of all epics)
+  const totalSimsMin = new Array(ITERS).fill(0);
+  const totalSimsMax = new Array(ITERS).fill(0);
+  const vLen = velocities.length;
+
+  for (let i = 0; i < ITERS; i++) {
+    epics.forEach(epic => {
+      if (epic.min === 0 && epic.max === 0) return;
+      const minS = epic.min || epic.max;
+      const maxS = epic.max || epic.min;
+      let remMin = minS, remMax = maxS;
+      let pMin = 0, pMax = 0;
+      for (let p = 0; p < periods.length; p++) {
+        if (remMin <= 0 && remMax <= 0) break;
+        const v = velocities[Math.floor(Math.random() * vLen)];
+        const eff = v * periods[p].cap;
+        if (remMin > 0) { remMin -= eff; pMin++; }
+        if (remMax > 0) { remMax -= eff; pMax++; }
+      }
+      const avgCap = periods.reduce((s,p)=>s+p.cap,0)/periods.length;
+      const avgV = velocities.reduce((a,b)=>a+b,0)/vLen * avgCap;
+      if (remMin > 0) pMin += remMin / avgV;
+      if (remMax > 0) pMax += remMax / avgV;
+      totalSimsMin[i] += pMin;
+      totalSimsMax[i] += pMax;
+    });
+  }
+  totalSimsMin.sort((a,b)=>a-b);
+  totalSimsMax.sort((a,b)=>a-b);
+
+  const totalMin85 = percentile(totalSimsMin, 85);
+  const totalMin95 = percentile(totalSimsMin, 95);
+  const totalMax85 = percentile(totalSimsMax, 85);
+  const totalMax95 = percentile(totalSimsMax, 95);
+
+  // Render summary
+  summaryBar.innerHTML = `
+    <div class="summary-stat">
+      <span class="label">Skupienie</span>
+      <span class="value">${focusPct}%</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Długość okresu</span>
+      <span class="value">${periodDays} dni rob.</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Próbki prędkości</span>
+      <span class="value">${velocities.length}</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Epiki</span>
+      <span class="value">${epicResults.length}</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Wszystkie epiki (min) p85</span>
+      <span class="value p85" style="color:#fde68a">${formatDate(periodsToDate(startDate, periodDays, totalMin85))}</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Wszystkie epiki (min) p95</span>
+      <span class="value p95" style="color:#f87171">${formatDate(periodsToDate(startDate, periodDays, totalMin95))}</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Wszystkie epiki (max) p85</span>
+      <span class="value p85" style="color:#fde68a">${formatDate(periodsToDate(startDate, periodDays, totalMax85))}</span>
+    </div>
+    <div class="summary-stat">
+      <span class="label">Wszystkie epiki (max) p95</span>
+      <span class="value p95" style="color:#f87171">${formatDate(periodsToDate(startDate, periodDays, totalMax95))}</span>
+    </div>
+  `;
+
+  // Render per-epic cards
+  resultsGrid.innerHTML = epicResults.map(er => {
+    const minP85Date = formatDate(periodsToDate(startDate, periodDays, er.min.p85));
+    const minP95Date = formatDate(periodsToDate(startDate, periodDays, er.min.p95));
+    const maxP85Date = formatDate(periodsToDate(startDate, periodDays, er.max.p85));
+    const maxP95Date = formatDate(periodsToDate(startDate, periodDays, er.max.p95));
+
+    return `
+      <div class="epic-result-card">
+        <h3>📦 ${er.name}</h3>
+        <div style="font-size:0.78rem;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">Estymacja minimalna</div>
+        <div class="percentile-row">
+          <span class="percentile-label">85. percentyl</span>
+          <span class="percentile-value p85">${minP85Date}</span>
+        </div>
+        <div class="percentile-row">
+          <span class="percentile-label">95. percentyl</span>
+          <span class="percentile-value p95">${minP95Date}</span>
+        </div>
+        <div style="font-size:0.78rem;color:#64748b;margin:10px 0 8px;text-transform:uppercase;letter-spacing:0.04em;">Estymacja maksymalna</div>
+        <div class="percentile-row">
+          <span class="percentile-label">85. percentyl</span>
+          <span class="percentile-value p85">${maxP85Date}</span>
+        </div>
+        <div class="percentile-row">
+          <span class="percentile-label">95. percentyl</span>
+          <span class="percentile-value p95">${maxP95Date}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Highlight cards that miss target end date
+  if (endVal) {
+    const deadline = new Date(endVal);
+    document.querySelectorAll('.epic-result-card').forEach((card, idx) => {
+      const er = epicResults[idx];
+      const warnDate = periodsToDate(startDate, periodDays, er.max.p95);
+      if (warnDate > deadline) {
+        card.style.borderColor = 'rgba(239,68,68,0.5)';
+        card.style.background = 'rgba(239,68,68,0.07)';
+      }
+    });
+  }
+}
+
+// ---- Debounce ----
+const debounceTimers = {};
+function debounce(fn, delay) {
+  return function() {
+    clearTimeout(debounceTimers[fn]);
+    debounceTimers[fn] = setTimeout(() => fn(), delay);
+  };
+}
+</script>
+</body>
+</html>

@@ -630,11 +630,11 @@
       <div class="form-row">
         <div class="form-field">
           <label>Data (DD.MM.YYYY)</label>
-          <input type="text" id="drNewDate" placeholder="np. 20.04.2025" maxlength="12">
+          <input type="text" id="drNewDate" placeholder="np. 20.04.2025" maxlength="12" oninput="onDRFormInput()" onkeydown="if(event.key==='Enter')addDRRecord()">
         </div>
         <div class="form-field">
           <label>Przepustowość (szt.)</label>
-          <input type="number" id="drNewVal" placeholder="np. 5" min="0" max="9999">
+          <input type="number" id="drNewVal" placeholder="np. 5" min="0" max="9999" oninput="onDRFormInput()" onkeydown="if(event.key==='Enter')addDRRecord()">
         </div>
         <button class="submit-btn" onclick="addDRRecord()">Dodaj</button>
       </div>
@@ -663,11 +663,11 @@
     <div class="form-row">
       <div class="form-field">
         <label>Data zamknięcia</label>
-        <input type="text" id="newClosed" placeholder="np. 05.15.2024" maxlength="12">
+        <input type="text" id="newClosed" placeholder="np. 05.15.2024" maxlength="12" oninput="onCTFormInput()" onkeydown="if(event.key==='Enter')addRecord()">
       </div>
       <div class="form-field">
         <label>Cycle Time (dni)</label>
-        <input type="number" id="newCT" placeholder="np. 15" min="1" max="9999">
+        <input type="number" id="newCT" placeholder="np. 15" min="1" max="9999" oninput="onCTFormInput()" onkeydown="if(event.key==='Enter')addRecord()">
       </div>
       <button class="submit-btn" onclick="addRecord()">Dodaj rekord</button>
     </div>
@@ -741,9 +741,29 @@
     // Persists toggle state across MR chart rebuilds
     const mrLineState = { meanLine: true, urlLine: true, lrlLine: true };
 
+    // Live-preview state (set while user types in the add-record forms)
+    let ctPreview = null;   // { id, closed, ct }  – CT form
+    let drPreview = null;   // { date, v }          – DR form
+
+    // ── Helpers (effective data including live preview) ───────────────────────
+    function getEffectiveData() {
+      if (ctPreview !== null) return [...data, ctPreview];
+      return data;
+    }
+
+    function getEffectiveDRRawData() {
+      if (drPreview === null) return drRawData;
+      const arr = [...drRawData];
+      const previewDt = parseDMY(drPreview.date);
+      const idx = arr.findIndex(r => parseDMY(r.date) > previewDt);
+      if (idx === -1) arr.push({ ...drPreview });
+      else arr.splice(idx, 0, { ...drPreview });
+      return arr;
+    }
+
     // ── Statistics ────────────────────────────────────────────────────────────
     function calcStats() {
-      const ct = data.map(d => d.ct);
+      const ct = getEffectiveData().map(d => d.ct);
       const n  = ct.length;
       const xbar = ct.reduce((s, v) => s + v, 0) / n;
       const mr = [];
@@ -811,10 +831,31 @@
     // ── Build X-Chart ─────────────────────────────────────────────────────────
     function buildXChart() {
       const s = calcStats();
-      const labels      = data.map(d => '#' + d.id + ' (' + d.closed + ')');
-      const pointColors = s.ct.map(v =>
-        v > s.UNPL ? '#f85149' : (s.LNPL > 0 && v < s.LNPL ? '#3fb950' : '#58a6ff')
+      const eff = getEffectiveData();
+      const isPreview = ctPreview !== null;
+      const labels = eff.map(d => '#' + d.id + ' (' + d.closed + ')');
+      const pointColors = s.ct.map((v, i) =>
+        isPreview && i === s.n - 1 ? '#ffd700'
+          : v > s.UNPL ? '#f85149' : (s.LNPL > 0 && v < s.LNPL ? '#3fb950' : '#58a6ff')
       );
+      const pointBgColors = s.ct.map((v, i) =>
+        isPreview && i === s.n - 1 ? 'transparent'
+          : v > s.UNPL ? '#f85149' : (s.LNPL > 0 && v < s.LNPL ? '#3fb950' : '#58a6ff')
+      );
+      const pointRadii = s.ct.map((v, i) => isPreview && i === s.n - 1 ? 7 : 5);
+      const pointBorderWidths = s.ct.map((v, i) => isPreview && i === s.n - 1 ? 3 : 1);
+
+      // Tooltip callbacks shared between update and create paths
+      const xTooltipTitle = items => {
+        if (isPreview && items[0].dataIndex === s.n - 1) return 'Podgląd (niezapisane)';
+        return 'Zadanie ' + eff[items[0].dataIndex].id;
+      };
+      const xTooltipAfterLabel = item => {
+        if (isPreview && item.dataIndex === s.n - 1) return ' (podgląd – kliknij Dodaj aby zapisać)';
+        if (item.parsed.y > s.UNPL) return ' ⚠ Powyżej UNPL';
+        if (s.LNPL > 0 && item.parsed.y < s.LNPL) return ' ⚠ Poniżej LNPL';
+        return '';
+      };
 
       const annotations = {
         unplLine: {
@@ -843,14 +884,13 @@
       if (xChart) {
         xChart.data.labels = labels;
         xChart.data.datasets[0].data = s.ct;
-        xChart.data.datasets[0].pointBackgroundColor = pointColors;
+        xChart.data.datasets[0].pointBackgroundColor = pointBgColors;
         xChart.data.datasets[0].pointBorderColor = pointColors;
+        xChart.data.datasets[0].pointRadius = pointRadii;
+        xChart.data.datasets[0].pointBorderWidth = pointBorderWidths;
         xChart.options.plugins.annotation.annotations = annotations;
-        xChart.options.plugins.tooltip.callbacks.afterLabel = item => {
-          if (item.parsed.y > s.UNPL) return ' ⚠ Powyżej UNPL';
-          if (s.LNPL > 0 && item.parsed.y < s.LNPL) return ' ⚠ Poniżej LNPL';
-          return '';
-        };
+        xChart.options.plugins.tooltip.callbacks.title = xTooltipTitle;
+        xChart.options.plugins.tooltip.callbacks.afterLabel = xTooltipAfterLabel;
         xChart.update();
         return;
       }
@@ -866,10 +906,11 @@
             borderColor: '#58a6ff',
             backgroundColor: 'rgba(88,166,255,0.12)',
             borderWidth: 2,
-            pointRadius: 5,
+            pointRadius: pointRadii,
             pointHoverRadius: 7,
-            pointBackgroundColor: pointColors,
+            pointBackgroundColor: pointBgColors,
             pointBorderColor: pointColors,
+            pointBorderWidth: pointBorderWidths,
             tension: 0.25,
             fill: false,
           }],
@@ -886,13 +927,9 @@
               titleColor: '#e6edf3',
               bodyColor: '#c9d1d9',
               callbacks: {
-                title:      items => 'Zadanie ' + data[items[0].dataIndex].id,
+                title:      xTooltipTitle,
                 label:      item  => ' Czas realizacji: ' + item.parsed.y + ' dni',
-                afterLabel: item  => {
-                  if (item.parsed.y > s.UNPL) return ' ⚠ Powyżej UNPL';
-                  if (s.LNPL > 0 && item.parsed.y < s.LNPL) return ' ⚠ Poniżej LNPL';
-                  return '';
-                },
+                afterLabel: xTooltipAfterLabel,
               },
             },
             annotation: { annotations },
@@ -920,9 +957,11 @@
       const s = calcStats();
 
       // All MR values with their originating pair indices
+      const eff = getEffectiveData();
       const allMR = s.mr.map((v, i) => ({
         v,
-        label: '#' + data[i].id + '→#' + data[i + 1].id,
+        label: '#' + eff[i].id + '→#' + eff[i + 1].id +
+          (ctPreview !== null && i === s.mr.length - 1 ? ' (podgląd)' : ''),
         fromIdx: i,
       }));
 
@@ -935,8 +974,22 @@
 
       const visibleValues = visible.map(item => item.v);
       const visibleLabels = visible.map(item => item.label);
-      const barColors     = visibleValues.map(v => v > s.URL ? '#f85149' : '#ffa657');
-      const barBgColors   = visibleValues.map(v => v > s.URL ? 'rgba(248,81,73,0.45)' : 'rgba(255,166,87,0.45)');
+      const barColors = visible.map(item =>
+        ctPreview !== null && item.fromIdx === s.mr.length - 1 ? '#ffd700'
+          : item.v > s.URL ? '#f85149' : '#ffa657'
+      );
+      const barBgColors = visible.map(item =>
+        ctPreview !== null && item.fromIdx === s.mr.length - 1 ? 'rgba(255,215,0,0.35)'
+          : item.v > s.URL ? 'rgba(248,81,73,0.45)' : 'rgba(255,166,87,0.45)'
+      );
+
+      // Tooltip title callback shared between update and create paths
+      const mrTooltipTitle = items => {
+        const effectiveData = getEffectiveData();
+        const item = visible[items[0].dataIndex];
+        if (ctPreview !== null && item.fromIdx === s.mr.length - 1) return 'MR do podglądu';
+        return 'MR między zadaniem #' + effectiveData[item.fromIdx].id + ' a #' + effectiveData[item.fromIdx + 1].id;
+      };
 
       const annotations = {
         meanLine: {
@@ -971,10 +1024,7 @@
         mrChart.data.datasets[0].backgroundColor = barBgColors;
         mrChart.data.datasets[0].borderColor     = barColors;
         mrChart.options.plugins.annotation.annotations = annotations;
-        mrChart.options.plugins.tooltip.callbacks.title = items => {
-          const item = visible[items[0].dataIndex];
-          return 'MR między zadaniem #' + data[item.fromIdx].id + ' a #' + data[item.fromIdx + 1].id;
-        };
+        mrChart.options.plugins.tooltip.callbacks.title = mrTooltipTitle;
         mrChart.options.plugins.tooltip.callbacks.afterLabel = item => {
           if (item.parsed.y > s.URL) return ' ⚠ Powyżej URL';
           return '';
@@ -1011,10 +1061,7 @@
               titleColor: '#e6edf3',
               bodyColor: '#c9d1d9',
               callbacks: {
-                title: items => {
-                  const item = visible[items[0].dataIndex];
-                  return 'MR między zadaniem #' + data[item.fromIdx].id + ' a #' + data[item.fromIdx + 1].id;
-                },
+                title: mrTooltipTitle,
                 label:      item => ' Moving Range: ' + item.parsed.y + ' dni',
                 afterLabel: item => {
                   if (item.parsed.y > s.URL) return ' ⚠ Powyżej URL';
@@ -1071,9 +1118,10 @@
 
     // ── Records table ─────────────────────────────────────────────────────────
     function refreshTable(highlightId) {
-      const s = calcStats();
       const mrMap = {};
-      s.mr.forEach((v, i) => { mrMap[data[i + 1].id] = v; });
+      for (let i = 1; i < data.length; i++) {
+        mrMap[data[i].id] = Math.abs(data[i].ct - data[i - 1].ct);
+      }
 
       const tbody = document.getElementById('recordsTbody');
       tbody.innerHTML = data.map(d => {
@@ -1102,6 +1150,7 @@
       }
 
       const newId = data.length > 0 ? Math.max(...data.map(d => d.id)) + 1 : 1;
+      ctPreview = null;
       data.push({ id: newId, closed: closedInput, ct: ctVal });
 
       updateKPIs();
@@ -1316,6 +1365,36 @@
       ctx.restore();
     }
 
+    // ── Live preview handlers ─────────────────────────────────────────────────
+    function onCTFormInput() {
+      const ctStr = document.getElementById('newCT').value;
+      const ct = parseInt(ctStr, 10);
+      if (!isNaN(ct) && ct >= 1) {
+        const nextId = data.length > 0 ? Math.max(...data.map(d => d.id)) + 1 : 1;
+        const closed = document.getElementById('newClosed').value.trim() || '(podgląd)';
+        ctPreview = { id: nextId, closed, ct };
+      } else {
+        ctPreview = null;
+      }
+      updateKPIs();
+      buildXChart();
+      buildMRChart();
+    }
+
+    function onDRFormInput() {
+      const dateIn = document.getElementById('drNewDate').value.trim();
+      const valStr = document.getElementById('drNewVal').value.trim();
+      const dateValid = /^\d{2}\.\d{2}\.\d{4}$/.test(dateIn);
+      const val = Number(valStr);
+      const valValid = valStr !== '' && Number.isInteger(val) && val >= 0;
+      if (dateValid && valValid && !drRawData.some(r => r.date === dateIn)) {
+        drPreview = { date: dateIn, v: val };
+      } else {
+        drPreview = null;
+      }
+      if (drXChartInst) refreshDRCharts();
+    }
+
     // ── Initialise ────────────────────────────────────────────────────────────
     updateKPIs();
     buildXChart();
@@ -1429,7 +1508,7 @@
 
     // Aggregate raw daily data to weekly totals (with optional date filter)
     function getDRWeeks() {
-      const filtered = drRawData.filter(r => {
+      const filtered = getEffectiveDRRawData().filter(r => {
         const iso = fmtISO(parseDMY(r.date));
         if (drDateFrom && iso < drDateFrom) return false;
         if (drDateTo   && iso > drDateTo)   return false;
@@ -1562,8 +1641,26 @@
 
       const signals     = detectDRSignals(s.dr, s);
       const labels      = weeks.map(w => w.key.replace('-', ' '));
-      const ptColors    = signals.map(sg => drSignalColor(sg));
-      const ptRadii     = signals.map(sg => sg ? 7 : 5);
+      const previewWKey = drPreview ? isoWeekKey(parseDMY(drPreview.date)) : null;
+      const ptColors = weeks.map((w, i) =>
+        drPreview !== null && w.key === previewWKey ? '#ffd700' : drSignalColor(signals[i])
+      );
+      const ptBgColors = weeks.map((w, i) =>
+        drPreview !== null && w.key === previewWKey ? 'transparent' : drSignalColor(signals[i])
+      );
+      const ptRadii = weeks.map((w, i) =>
+        drPreview !== null && w.key === previewWKey ? 8 : (signals[i] ? 7 : 5)
+      );
+      const ptBorderWidths = weeks.map((w, i) =>
+        drPreview !== null && w.key === previewWKey ? 3 : 1
+      );
+
+      // Tooltip afterLabel callback shared between update and create paths
+      const drTooltipAfterLabel = item => {
+        if (drPreview !== null && weeks[item.dataIndex] && weeks[item.dataIndex].key === previewWKey)
+          return ' (podgląd – kliknij Dodaj aby zapisać)';
+        return sigTooltip(signals[item.dataIndex]);
+      };
 
       const annotations = {
         medDRLine: {
@@ -1635,12 +1732,12 @@
       if (drXChartInst) {
         drXChartInst.data.labels                              = labels;
         drXChartInst.data.datasets[0].data                   = s.dr;
-        drXChartInst.data.datasets[0].pointBackgroundColor   = ptColors;
+        drXChartInst.data.datasets[0].pointBackgroundColor   = ptBgColors;
         drXChartInst.data.datasets[0].pointBorderColor       = ptColors;
+        drXChartInst.data.datasets[0].pointBorderWidth       = ptBorderWidths;
         drXChartInst.data.datasets[0].pointRadius            = ptRadii;
         drXChartInst.options.plugins.annotation.annotations  = annotations;
-        drXChartInst.options.plugins.tooltip.callbacks.afterLabel =
-          item => sigTooltip(signals[item.dataIndex]);
+        drXChartInst.options.plugins.tooltip.callbacks.afterLabel = drTooltipAfterLabel;
         drXChartInst.update();
         return;
       }
@@ -1658,8 +1755,9 @@
             borderWidth: 2,
             pointRadius: ptRadii,
             pointHoverRadius: 9,
-            pointBackgroundColor: ptColors,
+            pointBackgroundColor: ptBgColors,
             pointBorderColor: ptColors,
+            pointBorderWidth: ptBorderWidths,
             tension: 0.2,
             fill: false,
           }],
@@ -1678,7 +1776,7 @@
               callbacks: {
                 title:      items => weeks[items[0].dataIndex].key.replace('-', ' '),
                 label:      item  => ' DR: ' + item.parsed.y + ' szt./tyg.',
-                afterLabel: item  => sigTooltip(signals[item.dataIndex]),
+                afterLabel: drTooltipAfterLabel,
               },
             },
             annotation: { annotations },
@@ -1889,6 +1987,7 @@
       if (idx === -1) drRawData.push({ date: dateIn, v: val });
       else            drRawData.splice(idx, 0, { date: dateIn, v: val });
 
+      drPreview = null;
       refreshDRCharts();
 
       document.getElementById('drNewDate').value = '';

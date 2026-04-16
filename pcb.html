@@ -207,12 +207,11 @@
     for (let i = 1; i < n; i++) mr.push(Math.abs(ct[i] - ct[i - 1]));
     const mrbar = mr.reduce((s, v) => s + v, 0) / mr.length;
 
-    // d2 = 1.128 dla n=2 (pojedyncze przesunięcia)
-    const D4 = 3.267;   // górna granica mR-chart (nie używana tutaj)
-    const d2 = 1.128;
+    // Mnożnik granic naturalnych procesu dla X-chart (= 3/d2, d2=1.128 dla n=2)
+    const LIMIT_MULTIPLIER = 2.66;
 
-    const UNPL = xbar + 2.66 * mrbar;
-    const LNPL = xbar - 2.66 * mrbar;
+    const UNPL = xbar + LIMIT_MULTIPLIER * mrbar;
+    const LNPL = xbar - LIMIT_MULTIPLIER * mrbar;
 
     // ── KPI cards ────────────────────────────────────────────────────────────
     const kpiDefs = [

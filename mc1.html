@@ -40,9 +40,31 @@
     padding: 20px 28px;
     margin-bottom: 28px;
   }
-  .params-box h2 { font-size: 1rem; color: #f472b6; margin-bottom: 12px; }
-  .params-grid { display: flex; flex-wrap: wrap; gap: 12px 30px; font-size: 0.88rem; color: #cbd5e1; }
-  .params-grid span strong { color: #e2e8f0; }
+  .params-box h2 { font-size: 1rem; color: #f472b6; margin-bottom: 16px; }
+  .params-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px 24px;
+  }
+  .param-field { display: flex; flex-direction: column; gap: 5px; }
+  .param-field label { font-size: 0.82rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+  .param-field input {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #e2e8f0;
+    font-size: 0.92rem;
+    font-family: inherit;
+    transition: border-color 0.2s, background 0.2s;
+    width: 100%;
+  }
+  .param-field input:focus {
+    outline: none;
+    border-color: #f472b6;
+    background: rgba(244,114,182,0.08);
+  }
+  .param-field .param-hint { font-size: 0.75rem; color: #475569; }
 
   .run-btn {
     display: block;
@@ -139,16 +161,32 @@
 
 <div class="container">
   <h1>🦄 Monte Carlo – Prognoza Backlogu</h1>
-  <p class="subtitle">10 000 symulacji · Dwutygodniowe sprinty · Start: 1 maja 2026</p>
+  <p class="subtitle" id="subtitle">10 000 symulacji · Dwutygodniowe sprinty · Start: 1 maja 2026</p>
 
   <div class="params-box">
     <h2>📋 Parametry</h2>
     <div class="params-grid">
-      <span><strong>Elementy w backlogu:</strong> 62</span>
-      <span><strong>Data startu:</strong> 1 maja 2026</span>
-      <span><strong>Długość sprintu:</strong> 2 tygodnie</span>
-      <span><strong>Przepustowość (historyczna):</strong> 5, 4, 4, 5, 6, 4, 2, 3, 2, 5, 6</span>
-      <span><strong>Liczba symulacji:</strong> 10 000</span>
+      <div class="param-field">
+        <label for="inp-backlog">Elementy w backlogu</label>
+        <input type="number" id="inp-backlog" value="62" min="1" step="1">
+      </div>
+      <div class="param-field">
+        <label for="inp-start">Data startu</label>
+        <input type="date" id="inp-start" value="2026-05-01">
+      </div>
+      <div class="param-field">
+        <label for="inp-sprint">Długość sprintu (dni)</label>
+        <input type="number" id="inp-sprint" value="14" min="1" step="1">
+      </div>
+      <div class="param-field">
+        <label for="inp-sims">Liczba symulacji</label>
+        <input type="number" id="inp-sims" value="10000" min="100" max="100000" step="100">
+      </div>
+      <div class="param-field" style="grid-column: 1 / -1;">
+        <label for="inp-throughput">Przepustowość historyczna (wartości oddzielone przecinkami)</label>
+        <input type="text" id="inp-throughput" value="5, 4, 4, 5, 6, 4, 2, 3, 2, 5, 6">
+        <span class="param-hint">Np. 5, 4, 4, 5, 6 – liczba elementów dostarczonych w każdym sprincie</span>
+      </div>
     </div>
   </div>
 
@@ -156,12 +194,12 @@
 
   <div class="results-grid">
     <div class="card">
-      <div class="label">📅 Q1 – Ukończenie 85% backlogu<br><small style="color:#64748b">(≈ 53 elementy)</small></div>
+      <div class="label">📅 Q1 – Ukończenie 85% backlogu<br><small style="color:#64748b" id="lbl-85pct-count"></small></div>
       <div class="value" id="res-85pct-date">—</div>
       <div class="meta" id="res-85pct-sprints"></div>
     </div>
     <div class="card">
-      <div class="label">🏁 Q2 – Ukończenie 100% (62 elementy)</div>
+      <div class="label">🏁 Q2 – Ukończenie 100% (<span id="lbl-100pct-count">62</span> elementów)</div>
       <div class="value" id="res-100pct-date">—</div>
       <div class="meta" id="res-100pct-sprints"></div>
     </div>
@@ -183,7 +221,7 @@
   </div>
 
   <div class="chart-section">
-    <h2>📋 Tabela percentyli – ukończenie wszystkich 62 elementów</h2>
+    <h2>📋 Tabela percentyli – ukończenie wszystkich <span id="lbl-table-count">62</span> elementów</h2>
     <table class="percentile-table" id="pctTable">
       <thead><tr><th>Percentyl</th><th>Liczba sprintów</th><th>Data ukończenia</th><th>Interpretacja</th></tr></thead>
       <tbody><tr><td colspan="4" style="color:#64748b;text-align:center">Uruchom symulację…</td></tr></tbody>
@@ -237,20 +275,25 @@
 
 <script>
 // ─── Monte Carlo ───────────────────────────────────────────────────────────
-const throughput = [5, 4, 4, 5, 6, 4, 2, 3, 2, 5, 6];
-const BACKLOG    = 62;
-const SIMS       = 10000;
-const START_DATE = new Date(2026, 4, 1); // May 1, 2026
-const SPRINT_DAYS = 14;
-const END_AUG    = new Date(2026, 7, 31); // Aug 31, 2026
-
-function sprintsBetween(start, end) {
-  return Math.floor((end - start) / (SPRINT_DAYS * 86400000));
+function getParams() {
+  const backlog = parseInt(document.getElementById('inp-backlog').value, 10) || 62;
+  const startRaw = document.getElementById('inp-start').value;
+  const startDate = startRaw ? new Date(startRaw + 'T00:00:00') : new Date(2026, 4, 1);
+  const sprintDays = parseInt(document.getElementById('inp-sprint').value, 10) || 14;
+  const sims = Math.max(100, Math.min(100000, parseInt(document.getElementById('inp-sims').value, 10) || 10000));
+  const tpRaw = document.getElementById('inp-throughput').value;
+  const throughput = tpRaw.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n) && n > 0);
+  if (throughput.length === 0) throughput.push(1);
+  return { backlog, startDate, sprintDays, sims, throughput };
 }
 
-function addSprints(start, n) {
+function sprintsBetween(start, end, sprintDays) {
+  return Math.floor((end - start) / (sprintDays * 86400000));
+}
+
+function addSprints(start, n, sprintDays) {
   const d = new Date(start);
-  d.setDate(d.getDate() + n * SPRINT_DAYS);
+  d.setDate(d.getDate() + n * sprintDays);
   return d;
 }
 
@@ -258,16 +301,28 @@ function formatDate(d) {
   return d.toLocaleDateString('pl-PL', { day:'numeric', month:'long', year:'numeric' });
 }
 
-function sampleThroughput() {
-  return throughput[Math.floor(Math.random() * throughput.length)];
-}
-
 function runSimulation() {
+  const { backlog: BACKLOG, startDate: START_DATE, sprintDays: SPRINT_DAYS, sims: SIMS, throughput } = getParams();
+  const END_AUG = new Date(START_DATE.getFullYear(), START_DATE.getMonth() + 4, 0); // ~4 months after start
+
+  // Update subtitle and labels
+  const sprintWeeks = SPRINT_DAYS === 14 ? 'Dwutygodniowe sprinty' : `Sprinty ${SPRINT_DAYS}-dniowe`;
+  document.getElementById('subtitle').textContent =
+    `${SIMS.toLocaleString('pl-PL')} symulacji · ${sprintWeeks} · Start: ${formatDate(START_DATE)}`;
+
+  const target85 = Math.ceil(BACKLOG * 0.85);
+  document.getElementById('lbl-85pct-count').textContent = `(≈ ${target85} elementy)`;
+  document.getElementById('lbl-100pct-count').textContent = BACKLOG;
+  document.getElementById('lbl-table-count').textContent = BACKLOG;
+
+  function sampleThroughput() {
+    return throughput[Math.floor(Math.random() * throughput.length)];
+  }
+
   // arrays: sprintsToComplete[85%] and sprintsToComplete[100%]
   const results100 = new Array(SIMS);
   const results85  = new Array(SIMS);
-  const target85   = Math.ceil(BACKLOG * 0.85); // 53
-  const augSprints = sprintsBetween(START_DATE, END_AUG); // sprints available until Aug 31
+  const augSprints = sprintsBetween(START_DATE, END_AUG, SPRINT_DAYS); // sprints available until END_AUG
 
   const augCounts = [];
 
@@ -294,12 +349,12 @@ function runSimulation() {
   const sorted100 = [...results100].sort((a,b) => a-b);
 
   const p85_sprint  = sorted85[Math.floor(0.85 * SIMS)];
-  const p85_date    = addSprints(START_DATE, p85_sprint);
+  const p85_date    = addSprints(START_DATE, p85_sprint, SPRINT_DAYS);
 
   const p100_sprint = sorted100[Math.floor(0.85 * SIMS)];
-  const p100_date   = addSprints(START_DATE, p100_sprint);
+  const p100_date   = addSprints(START_DATE, p100_sprint, SPRINT_DAYS);
 
-  // ── Q3: median items by Aug 31 ──
+  // ── Q3: median items by END_AUG ──
   const sortedAug = [...augCounts].sort((a,b) => a-b);
   const medAug    = sortedAug[Math.floor(0.50 * SIMS)];
   const p85Aug    = sortedAug[Math.floor(0.85 * SIMS)];
@@ -312,15 +367,15 @@ function runSimulation() {
   document.getElementById('res-100pct-sprints').textContent = `85. percentyl: sprint ${p100_sprint}`;
 
   document.getElementById('res-aug-items').textContent = `${medAug} elem. (med.)`;
-  document.getElementById('res-aug-meta').textContent  = `85. percentyl: min ${p85Aug} elem. · Dostępne sprinty do 31.08: ${augSprints}`;
+  document.getElementById('res-aug-meta').textContent  = `85. percentyl: min ${p85Aug} elem. · Dostępne sprinty do ${formatDate(END_AUG)}: ${augSprints}`;
 
   // ── Histogram chart ──
-  drawHistogram(sorted100);
-  drawCDF(sorted100);
-  drawTable(sorted100);
+  drawHistogram(sorted100, SIMS, START_DATE, SPRINT_DAYS);
+  drawCDF(sorted100, SIMS, START_DATE, SPRINT_DAYS);
+  drawTable(sorted100, SIMS, START_DATE, SPRINT_DAYS);
 }
 
-function drawHistogram(sorted) {
+function drawHistogram(sorted, SIMS, START_DATE, SPRINT_DAYS) {
   const ctx = document.getElementById('histChart').getContext('2d');
   if (window._histChart) window._histChart.destroy();
 
@@ -331,7 +386,6 @@ function drawHistogram(sorted) {
   const labels = Array.from({length: bins}, (_,i) => `Sprint ${i+min}`);
 
   const p85idx = sorted[Math.floor(0.85*SIMS)] - min;
-
   const colors = labels.map((_,i) => i <= p85idx ? 'rgba(244,114,182,0.75)' : 'rgba(139,92,246,0.6)');
 
   window._histChart = new Chart(ctx, {
@@ -349,7 +403,7 @@ function drawHistogram(sorted) {
   });
 }
 
-function drawCDF(sorted) {
+function drawCDF(sorted, SIMS, START_DATE, SPRINT_DAYS) {
   const ctx = document.getElementById('cdfChart').getContext('2d');
   if (window._cdfChart) window._cdfChart.destroy();
 
@@ -358,7 +412,7 @@ function drawCDF(sorted) {
   let prev = sorted[0] - 1;
   for (let i = 0; i < n; i++) {
     if (sorted[i] !== prev) {
-      pts.push({ x: addSprints(START_DATE, sorted[i]).toLocaleDateString('pl-PL',{month:'short',year:'numeric'}), y: Math.round((i+1)/n*100) });
+      pts.push({ x: addSprints(START_DATE, sorted[i], SPRINT_DAYS).toLocaleDateString('pl-PL',{month:'short',year:'numeric'}), y: Math.round((i+1)/n*100) });
       prev = sorted[i];
     }
   }
@@ -390,13 +444,13 @@ function drawCDF(sorted) {
   });
 }
 
-function drawTable(sorted) {
+function drawTable(sorted, SIMS, START_DATE, SPRINT_DAYS) {
   const percs = [50,60,70,75,80,85,90,95,99];
   const labels = {50:'mediana – 50% szans',60:'',70:'',75:'',80:'',85:'zalecane',90:'konserwatywne',95:'bardzo konserwatywne',99:'prawie pewne'};
   const tbody = document.querySelector('#pctTable tbody');
   tbody.innerHTML = percs.map(p => {
     const sp = sorted[Math.floor(p/100 * SIMS)];
-    const dt = formatDate(addSprints(START_DATE, sp));
+    const dt = formatDate(addSprints(START_DATE, sp, SPRINT_DAYS));
     return `<tr><td><strong>${p}%</strong></td><td>${sp}</td><td>${dt}</td><td style="color:#64748b">${labels[p]}</td></tr>`;
   }).join('');
 }

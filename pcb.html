@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PCB – X-Chart Czasu Realizacji</title>
+  <title>PCB – Dashboard Czasu Realizacji</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <style>
@@ -14,7 +14,7 @@
       background: #0d1117;
       color: #c9d1d9;
       min-height: 100vh;
-      padding: 24px 20px;
+      padding: 24px 20px 120px;
     }
 
     h1 {
@@ -30,8 +30,39 @@
       text-align: center;
       font-size: 13px;
       color: #8b949e;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
+
+    /* ── Tabs ── */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 6px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #8b949e;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover { background: #21262d; color: #e6edf3; }
+    .tab-btn.active { background: #21262d; color: #58a6ff; }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
 
     /* ── KPI cards ── */
     .kpi-row {
@@ -75,9 +106,12 @@
       margin-top: 2px;
     }
 
-    .kpi-card.kpi-unpl .kpi-value { color: #f85149; }
-    .kpi-card.kpi-lnpl .kpi-value { color: #3fb950; }
-    .kpi-card.kpi-mean .kpi-value { color: #d2a8ff; }
+    .kpi-card.kpi-unpl  .kpi-value { color: #f85149; }
+    .kpi-card.kpi-lnpl  .kpi-value { color: #3fb950; }
+    .kpi-card.kpi-mean  .kpi-value { color: #d2a8ff; }
+    .kpi-card.kpi-url   .kpi-value { color: #f85149; }
+    .kpi-card.kpi-lrl   .kpi-value { color: #3fb950; }
+    .kpi-card.kpi-mrbar .kpi-value { color: #ffa657; }
 
     /* ── Chart panel ── */
     .chart-panel {
@@ -127,43 +161,390 @@
     .legend-line.dashed {
       background: repeating-linear-gradient(90deg, var(--c) 0, var(--c) 6px, transparent 6px, transparent 12px);
     }
+
+    /* ── Controls row ── */
+    .controls-row {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .controls-label {
+      font-size: 11px;
+      color: #8b949e;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Toggle buttons ── */
+    .toggle-btn {
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #e6edf3;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:hover { border-color: #58a6ff; }
+
+    .toggle-btn.inactive {
+      opacity: 0.38;
+      text-decoration: line-through;
+    }
+
+    /* ── Filter inputs ── */
+    .filter-input {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 5px 8px;
+      font-size: 12px;
+      width: 72px;
+    }
+
+    .filter-input:focus { outline: none; border-color: #58a6ff; }
+
+    .filter-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #21262d;
+      color: #8b949e;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+
+    /* ── Add Record Form ── */
+    .add-record-panel {
+      max-width: 1100px;
+      margin: 28px auto 0;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 24px 32px;
+    }
+
+    .add-record-panel h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 18px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #8b949e;
+    }
+
+    .form-field input {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 8px 12px;
+      font-size: 14px;
+      width: 170px;
+    }
+
+    .form-field input:focus { outline: none; border-color: #58a6ff; }
+
+    .submit-btn {
+      padding: 9px 24px;
+      border-radius: 6px;
+      border: none;
+      background: #238636;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .submit-btn:hover { background: #2ea043; }
+
+    .form-msg {
+      margin-top: 12px;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
+    /* ── Records table ── */
+    .records-table-wrap {
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+
+    .records-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .records-table th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid #30363d;
+      color: #8b949e;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .records-table td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #21262d;
+      color: #c9d1d9;
+    }
+
+    .records-table tr:last-child td { border-bottom: none; }
+    .records-table tr.new-row td { color: #3fb950; }
+
+    /* ── Unicorn ── */
+    .unicorn-corner {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    .unicorn-wrap {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      pointer-events: auto;
+    }
+
+    .unicorn-emoji {
+      font-size: 62px;
+      line-height: 1;
+      animation: unicornBounce 2s ease-in-out infinite;
+      filter: drop-shadow(0 0 14px #ff69b4) drop-shadow(0 0 28px rgba(255,105,180,0.35));
+      cursor: pointer;
+      user-select: none;
+      display: block;
+    }
+
+    @keyframes unicornBounce {
+      0%,100% { transform: translateY(0) rotate(-3deg); }
+      30%      { transform: translateY(-10px) rotate(3deg); }
+      60%      { transform: translateY(-5px) rotate(-1deg); }
+    }
+
+    .fart-zone {
+      position: absolute;
+      left: 4px;
+      bottom: 14px;
+      pointer-events: none;
+    }
+
+    .fart-bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%,
+        hsl(calc(var(--hue) + 50), 100%, 82%),
+        hsl(var(--hue), 100%, 58%));
+      box-shadow: 0 0 5px hsl(var(--hue), 100%, 65%);
+      animation: fartFloat var(--dur, 1.8s) ease-out forwards;
+    }
+
+    @keyframes fartFloat {
+      0%   { transform: translate(0, 0) scale(1);       opacity: 0.92; }
+      25%  { transform: translate(-18px,-22px) scale(1.15); opacity: 0.9; }
+      100% { transform: translate(-55px,-85px) scale(0.15); opacity: 0; }
+    }
+
+    .unicorn-label {
+      font-size: 11px;
+      color: #ff69b4;
+      text-align: center;
+      pointer-events: auto;
+      cursor: pointer;
+      user-select: none;
+      background: rgba(13,17,23,0.75);
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+    }
+
+    .unicorn-label:hover { color: #ffb3d9; }
   </style>
 </head>
 <body>
 
-  <h1>X-Chart – PCB Czas Realizacji</h1>
-  <p class="subtitle">Wykres kontrolny wartości jednostkowych (Individual Values Chart) • dane z pliku 3. PCB Czas realizacji.csv</p>
+  <h1>PCB – Dashboard Czasu Realizacji</h1>
+  <p class="subtitle">Wykres kontrolny wartości jednostkowych i kroczących zmian • dane z pliku 3. PCB Czas realizacji.csv</p>
 
-  <div class="kpi-row" id="kpiRow"></div>
+  <!-- ── Tab navigation ── -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="btn-xchart" onclick="switchTab('xchart')">📈 X-Chart</button>
+    <button class="tab-btn" id="btn-mr" onclick="switchTab('mr')">📊 Moving Ranges</button>
+  </div>
 
-  <div class="chart-panel">
-    <h2>Czas realizacji poszczególnych zadań (dni)</h2>
-    <div class="chart-wrapper">
-      <canvas id="xchart"></canvas>
-    </div>
-    <div class="legend-row">
-      <div class="legend-item">
-        <div class="legend-line" style="background:#58a6ff;"></div>
-        <span>Czas realizacji</span>
+  <!-- ══════════════════════════════════════════
+       Tab 1 – X-Chart
+  ══════════════════════════════════════════ -->
+  <div id="tab-xchart" class="tab-pane active">
+    <div class="kpi-row" id="kpiRowX"></div>
+    <div class="chart-panel">
+      <h2>Czas realizacji poszczególnych zadań (dni)</h2>
+      <div class="chart-wrapper">
+        <canvas id="xchart"></canvas>
       </div>
-      <div class="legend-item">
-        <div class="legend-line" style="background:#d2a8ff;"></div>
-        <span>Średnia (X̄)</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-line dashed" style="--c:#f85149;"></div>
-        <span>UNPL</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-line dashed" style="--c:#3fb950;"></div>
-        <span>LNPL</span>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#58a6ff;"></div>
+          <span>Czas realizacji</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#d2a8ff;"></div>
+          <span>Średnia (X̄)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#f85149;"></div>
+          <span>UNPL</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#3fb950;"></div>
+          <span>LNPL</span>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════
+       Tab 2 – Moving Ranges
+  ══════════════════════════════════════════ -->
+  <div id="tab-mr" class="tab-pane">
+    <div class="kpi-row" id="kpiRowMR"></div>
+
+    <!-- Controls: toggles + filter -->
+    <div class="controls-row">
+      <div class="controls-group">
+        <span class="controls-label">Linie:</span>
+        <button class="toggle-btn active" id="tog-mean" onclick="toggleMRLine('meanLine', this)">Średnia mR̄</button>
+        <button class="toggle-btn active" id="tog-url"  onclick="toggleMRLine('urlLine',  this)">URL</button>
+        <button class="toggle-btn active" id="tog-lrl"  onclick="toggleMRLine('lrlLine',  this)">LRL</button>
+      </div>
+      <div class="controls-group">
+        <span class="controls-label">Filtruj MR:</span>
+        <input type="number" id="mrMin" class="filter-input" placeholder="Min" min="0" aria-label="Minimalna wartość Moving Range">
+        <span style="color:#8b949e;font-size:12px;">–</span>
+        <input type="number" id="mrMax" class="filter-input" placeholder="Max" min="0" aria-label="Maksymalna wartość Moving Range">
+        <button class="filter-btn" onclick="applyMRFilter()">Zastosuj</button>
+        <button class="filter-btn" onclick="resetMRFilter()">Reset</button>
+      </div>
+    </div>
+
+    <div class="chart-panel">
+      <h2>Moving Ranges – kroczące zmiany wartości (|CT<sub>i</sub> − CT<sub>i‑1</sub>|)</h2>
+      <div class="chart-wrapper">
+        <canvas id="mrchart"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#ffa657;"></div>
+          <span>Moving Range</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#d2a8ff;"></div>
+          <span>Średnia (mR̄)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#f85149;"></div>
+          <span>URL = 3.27 × mR̄</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#3fb950;"></div>
+          <span>LRL = 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       Add Record Form
+  ══════════════════════════════════════════ -->
+  <div class="add-record-panel">
+    <h3>➕ Dodaj nowy rekord</h3>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Data zamknięcia</label>
+        <input type="text" id="newClosed" placeholder="np. 05.15.2024" maxlength="12">
+      </div>
+      <div class="form-field">
+        <label>Cycle Time (dni)</label>
+        <input type="number" id="newCT" placeholder="np. 15" min="1" max="9999">
+      </div>
+      <button class="submit-btn" onclick="addRecord()">Dodaj rekord</button>
+    </div>
+    <div class="form-msg" id="formMsg"></div>
+    <div class="records-table-wrap">
+      <table class="records-table" id="recordsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Data zamknięcia</th>
+            <th>Cycle Time (dni)</th>
+            <th>Moving Range</th>
+          </tr>
+        </thead>
+        <tbody id="recordsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       Animated Unicorn 🦄
+  ══════════════════════════════════════════ -->
+  <div class="unicorn-corner" id="unicornCorner">
+    <div class="unicorn-wrap">
+      <div class="fart-zone" id="fartZone"></div>
+      <div class="unicorn-emoji" title="Kliknij aby uśpić jednorożca" onclick="toggleUnicorn()">🦄</div>
+    </div>
+    <div class="unicorn-label" onclick="toggleUnicorn()" id="unicornLabel">ukryj jednorożca</div>
+  </div>
+
   <script>
-    // ── Dane z pliku 3. PCB Czas realizacji.csv ──────────────────────────────
-    const data = [
+    // ── Raw data ──────────────────────────────────────────────────────────────
+    let data = [
       { id:  1, closed: '01.05.2024', ct: 38 },
       { id:  2, closed: '01.11.2024', ct: 24 },
       { id:  3, closed: '01.16.2024', ct: 14 },
@@ -196,191 +577,426 @@
       { id: 30, closed: '04.09.2024', ct: 20 },
     ];
 
-    // ── Statystyki X-chart ───────────────────────────────────────────────────
-    const ct = data.map(d => d.ct);
-    const n  = ct.length;
+    // ── State ─────────────────────────────────────────────────────────────────
+    let xChart   = null;
+    let mrChart  = null;
+    let mrFilterMin = null;
+    let mrFilterMax = null;
+    // Persists toggle state across MR chart rebuilds
+    const mrLineState = { meanLine: true, urlLine: true, lrlLine: true };
 
-    const xbar = ct.reduce((s, v) => s + v, 0) / n;
+    // ── Statistics ────────────────────────────────────────────────────────────
+    function calcStats() {
+      const ct = data.map(d => d.ct);
+      const n  = ct.length;
+      const xbar = ct.reduce((s, v) => s + v, 0) / n;
+      const mr = [];
+      for (let i = 1; i < n; i++) mr.push(Math.abs(ct[i] - ct[i - 1]));
+      const mrbar = mr.length ? mr.reduce((s, v) => s + v, 0) / mr.length : 0;
+      const UNPL = xbar + 2.66 * mrbar;
+      const LNPL = Math.max(0, xbar - 2.66 * mrbar);
+      const URL  = 3.27 * mrbar;
+      const LRL  = 0;
+      return { ct, n, xbar, mr, mrbar, UNPL, LNPL, URL, LRL };
+    }
 
-    // Moving ranges (29 wartości)
-    const mr  = [];
-    for (let i = 1; i < n; i++) mr.push(Math.abs(ct[i] - ct[i - 1]));
-    const mrbar = mr.reduce((s, v) => s + v, 0) / mr.length;
+    // ── Tab switching ─────────────────────────────────────────────────────────
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      document.getElementById('btn-' + tabId).classList.add('active');
+    }
 
-    // Mnożnik granic naturalnych procesu dla X-chart (= 3/d2, d2=1.128 dla n=2)
-    const LIMIT_MULTIPLIER = 2.66;
+    // ── KPI rows ──────────────────────────────────────────────────────────────
+    function updateKPIs() {
+      const s = calcStats();
 
-    const UNPL = xbar + LIMIT_MULTIPLIER * mrbar;
-    const LNPL = xbar - LIMIT_MULTIPLIER * mrbar;
+      const kpiXDefs = [
+        { label: 'Liczba zadań',    value: s.n,                                   unit: 'szt.', cls: '' },
+        { label: 'Średnia (X̄)',     value: s.xbar.toFixed(1),                     unit: 'dni',  cls: 'kpi-mean' },
+        { label: 'Śr. rozstęp mR̄',  value: s.mrbar.toFixed(1),                    unit: 'dni',  cls: '' },
+        { label: 'UNPL',            value: s.UNPL.toFixed(1),                     unit: 'dni',  cls: 'kpi-unpl' },
+        { label: 'LNPL',            value: s.LNPL.toFixed(1),                     unit: 'dni',  cls: 'kpi-lnpl' },
+        { label: 'Max CT',          value: Math.max(...s.ct),                     unit: 'dni',  cls: '' },
+      ];
+      document.getElementById('kpiRowX').innerHTML = kpiXDefs.map(k =>
+        `<div class="kpi-card ${k.cls}">
+           <div class="kpi-label">${k.label}</div>
+           <div class="kpi-value">${k.value}</div>
+           <div class="kpi-unit">${k.unit}</div>
+         </div>`).join('');
 
-    // ── KPI cards ────────────────────────────────────────────────────────────
-    const kpiDefs = [
-      { label: 'Liczba zadań',   value: n,              unit: 'szt.',   cls: '' },
-      { label: 'Średnia (X̄)',    value: xbar.toFixed(1), unit: 'dni',   cls: 'kpi-mean' },
-      { label: 'Śr. rozstęp mR̄', value: mrbar.toFixed(1), unit: 'dni',  cls: '' },
-      { label: 'UNPL',           value: UNPL.toFixed(1), unit: 'dni',   cls: 'kpi-unpl' },
-      { label: 'LNPL',           value: Math.max(0, LNPL).toFixed(1), unit: 'dni', cls: 'kpi-lnpl' },
-      { label: 'Max CT',         value: Math.max(...ct), unit: 'dni',   cls: '' },
-    ];
+      const kpiMRDefs = [
+        { label: 'Liczba MR',  value: s.mr.length,                    unit: 'szt.', cls: '' },
+        { label: 'Śr. mR̄',    value: s.mrbar.toFixed(1),             unit: 'dni',  cls: 'kpi-mrbar' },
+        { label: 'URL',        value: s.URL.toFixed(1),               unit: 'dni',  cls: 'kpi-url' },
+        { label: 'LRL',        value: s.LRL.toFixed(1),               unit: 'dni',  cls: 'kpi-lrl' },
+        { label: 'Max MR',     value: s.mr.length ? Math.max(...s.mr) : 0, unit: 'dni', cls: '' },
+        { label: 'Min MR',     value: s.mr.length ? Math.min(...s.mr) : 0, unit: 'dni', cls: '' },
+      ];
+      document.getElementById('kpiRowMR').innerHTML = kpiMRDefs.map(k =>
+        `<div class="kpi-card ${k.cls}">
+           <div class="kpi-label">${k.label}</div>
+           <div class="kpi-value">${k.value}</div>
+           <div class="kpi-unit">${k.unit}</div>
+         </div>`).join('');
+    }
 
-    const kpiRow = document.getElementById('kpiRow');
-    kpiDefs.forEach(k => {
-      kpiRow.innerHTML += `
-        <div class="kpi-card ${k.cls}">
-          <div class="kpi-label">${k.label}</div>
-          <div class="kpi-value">${k.value}</div>
-          <div class="kpi-unit">${k.unit}</div>
-        </div>`;
-    });
+    // ── Build X-Chart ─────────────────────────────────────────────────────────
+    function buildXChart() {
+      const s = calcStats();
+      const labels      = data.map(d => '#' + d.id + ' (' + d.closed + ')');
+      const pointColors = s.ct.map(v =>
+        v > s.UNPL ? '#f85149' : (s.LNPL > 0 && v < s.LNPL ? '#3fb950' : '#58a6ff')
+      );
 
-    // ── Etykiety osi X ───────────────────────────────────────────────────────
-    const labels = data.map(d => '#' + d.id + ' (' + d.closed + ')');
+      const annotations = {
+        unplLine: {
+          type: 'line', yMin: s.UNPL, yMax: s.UNPL,
+          borderColor: '#f85149', borderWidth: 2, borderDash: [8, 5],
+          label: { display: true, content: 'UNPL = ' + s.UNPL.toFixed(1), position: 'end',
+            color: '#f85149', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        lnplLine: {
+          type: 'line', yMin: s.LNPL, yMax: s.LNPL,
+          borderColor: '#3fb950', borderWidth: 2, borderDash: [8, 5],
+          label: { display: true, content: 'LNPL = ' + s.LNPL.toFixed(1), position: 'end',
+            color: '#3fb950', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: 10 },
+        },
+        meanLine: {
+          type: 'line', yMin: s.xbar, yMax: s.xbar,
+          borderColor: '#d2a8ff', borderWidth: 2,
+          label: { display: true, content: 'X̄ = ' + s.xbar.toFixed(1), position: 'start',
+            color: '#d2a8ff', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+      };
 
-    // ── Chart.js ─────────────────────────────────────────────────────────────
-    const ctx = document.getElementById('xchart').getContext('2d');
+      if (xChart) {
+        xChart.data.labels = labels;
+        xChart.data.datasets[0].data = s.ct;
+        xChart.data.datasets[0].pointBackgroundColor = pointColors;
+        xChart.data.datasets[0].pointBorderColor = pointColors;
+        xChart.options.plugins.annotation.annotations = annotations;
+        xChart.options.plugins.tooltip.callbacks.afterLabel = item => {
+          if (item.parsed.y > s.UNPL) return ' ⚠ Powyżej UNPL';
+          if (s.LNPL > 0 && item.parsed.y < s.LNPL) return ' ⚠ Poniżej LNPL';
+          return '';
+        };
+        xChart.update();
+        return;
+      }
 
-    // Linia UNPL dashed
-    const UNPL_PLUGIN_LINE = {
-      id: 'unpl',
-      type: 'line',
-      yMin: UNPL,
-      yMax: UNPL,
-      borderColor: '#f85149',
-      borderWidth: 2,
-      borderDash: [8, 5],
-      label: {
-        display: true,
-        content: 'UNPL = ' + UNPL.toFixed(1),
-        position: 'end',
-        color: '#f85149',
-        backgroundColor: 'rgba(13,17,23,0.85)',
-        font: { size: 11, weight: 'bold' },
-        padding: { x: 6, y: 3 },
-        yAdjust: -10,
-      },
-    };
-
-    const LNPL_VALUE = Math.max(0, LNPL);
-    const LNPL_PLUGIN_LINE = {
-      id: 'lnpl',
-      type: 'line',
-      yMin: LNPL_VALUE,
-      yMax: LNPL_VALUE,
-      borderColor: '#3fb950',
-      borderWidth: 2,
-      borderDash: [8, 5],
-      label: {
-        display: true,
-        content: 'LNPL = ' + LNPL_VALUE.toFixed(1),
-        position: 'end',
-        color: '#3fb950',
-        backgroundColor: 'rgba(13,17,23,0.85)',
-        font: { size: 11, weight: 'bold' },
-        padding: { x: 6, y: 3 },
-        yAdjust: 10,
-      },
-    };
-
-    const MEAN_LINE = {
-      id: 'mean',
-      type: 'line',
-      yMin: xbar,
-      yMax: xbar,
-      borderColor: '#d2a8ff',
-      borderWidth: 2,
-      label: {
-        display: true,
-        content: 'X̄ = ' + xbar.toFixed(1),
-        position: 'start',
-        color: '#d2a8ff',
-        backgroundColor: 'rgba(13,17,23,0.85)',
-        font: { size: 11, weight: 'bold' },
-        padding: { x: 6, y: 3 },
-        yAdjust: -10,
-      },
-    };
-
-    // Podświetl punkty przekraczające UNPL
-    const pointColors = ct.map(v =>
-      v > UNPL ? '#f85149' : v < LNPL_VALUE && LNPL_VALUE > 0 ? '#3fb950' : '#58a6ff'
-    );
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Cycle Time',
-          data: ct,
-          borderColor: '#58a6ff',
-          backgroundColor: 'rgba(88,166,255,0.12)',
-          borderWidth: 2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointBackgroundColor: pointColors,
-          pointBorderColor: pointColors,
-          tension: 0.25,
-          fill: false,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#21262d',
-            borderColor: '#30363d',
-            borderWidth: 1,
-            titleColor: '#e6edf3',
-            bodyColor: '#c9d1d9',
-            callbacks: {
-              title: items => 'Zadanie ' + data[items[0].dataIndex].id,
-              label: item  => ' Czas realizacji: ' + item.parsed.y + ' dni',
-              afterLabel: item => {
-                const v = item.parsed.y;
-                if (v > UNPL) return ' ⚠ Powyżej UNPL';
-                if (LNPL_VALUE > 0 && v < LNPL_VALUE) return ' ⚠ Poniżej LNPL';
-                return '';
+      const ctx = document.getElementById('xchart').getContext('2d');
+      xChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Cycle Time',
+            data: s.ct,
+            borderColor: '#58a6ff',
+            backgroundColor: 'rgba(88,166,255,0.12)',
+            borderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            tension: 0.25,
+            fill: false,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#21262d',
+              borderColor: '#30363d',
+              borderWidth: 1,
+              titleColor: '#e6edf3',
+              bodyColor: '#c9d1d9',
+              callbacks: {
+                title:      items => 'Zadanie ' + data[items[0].dataIndex].id,
+                label:      item  => ' Czas realizacji: ' + item.parsed.y + ' dni',
+                afterLabel: item  => {
+                  if (item.parsed.y > s.UNPL) return ' ⚠ Powyżej UNPL';
+                  if (s.LNPL > 0 && item.parsed.y < s.LNPL) return ' ⚠ Poniżej LNPL';
+                  return '';
+                },
               },
             },
+            annotation: { annotations },
           },
-          annotation: {
-            annotations: {
-              unplLine: UNPL_PLUGIN_LINE,
-              lnplLine: LNPL_PLUGIN_LINE,
-              meanLine: MEAN_LINE,
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', font: { size: 10 }, maxRotation: 45, minRotation: 30 },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Czas realizacji (dni)', color: '#8b949e', font: { size: 12 } },
+              ticks: { color: '#8b949e', font: { size: 11 } },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
             },
           },
         },
-        scales: {
-          x: {
-            ticks: {
-              color: '#8b949e',
-              font: { size: 10 },
-              maxRotation: 45,
-              minRotation: 30,
+      });
+    }
+
+    // ── Build MR-Chart ────────────────────────────────────────────────────────
+    function buildMRChart() {
+      const s = calcStats();
+
+      // All MR values with their originating pair indices
+      const allMR = s.mr.map((v, i) => ({
+        v,
+        label: '#' + data[i].id + '→#' + data[i + 1].id,
+        fromIdx: i,
+      }));
+
+      // Apply value filter
+      const visible = allMR.filter(item => {
+        if (mrFilterMin !== null && item.v < mrFilterMin) return false;
+        if (mrFilterMax !== null && item.v > mrFilterMax) return false;
+        return true;
+      });
+
+      const visibleValues = visible.map(item => item.v);
+      const visibleLabels = visible.map(item => item.label);
+      const barColors     = visibleValues.map(v => v > s.URL ? '#f85149' : '#ffa657');
+      const barBgColors   = visibleValues.map(v => v > s.URL ? 'rgba(248,81,73,0.45)' : 'rgba(255,166,87,0.45)');
+
+      const annotations = {
+        meanLine: {
+          type: 'line', yMin: s.mrbar, yMax: s.mrbar,
+          borderColor: '#d2a8ff', borderWidth: 2,
+          display: mrLineState.meanLine,
+          label: { display: true, content: 'mR̄ = ' + s.mrbar.toFixed(1), position: 'start',
+            color: '#d2a8ff', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        urlLine: {
+          type: 'line', yMin: s.URL, yMax: s.URL,
+          borderColor: '#f85149', borderWidth: 2, borderDash: [8, 5],
+          display: mrLineState.urlLine,
+          label: { display: true, content: 'URL = ' + s.URL.toFixed(1), position: 'end',
+            color: '#f85149', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        lrlLine: {
+          type: 'line', yMin: s.LRL, yMax: s.LRL,
+          borderColor: '#3fb950', borderWidth: 2, borderDash: [8, 5],
+          display: mrLineState.lrlLine,
+          label: { display: true, content: 'LRL = 0', position: 'end',
+            color: '#3fb950', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: 10 },
+        },
+      };
+
+      if (mrChart) {
+        mrChart.data.labels = visibleLabels;
+        mrChart.data.datasets[0].data            = visibleValues;
+        mrChart.data.datasets[0].backgroundColor = barBgColors;
+        mrChart.data.datasets[0].borderColor     = barColors;
+        mrChart.options.plugins.annotation.annotations = annotations;
+        mrChart.options.plugins.tooltip.callbacks.title = items => {
+          const item = visible[items[0].dataIndex];
+          return 'MR między zadaniem #' + data[item.fromIdx].id + ' a #' + data[item.fromIdx + 1].id;
+        };
+        mrChart.options.plugins.tooltip.callbacks.afterLabel = item => {
+          if (item.parsed.y > s.URL) return ' ⚠ Powyżej URL';
+          return '';
+        };
+        mrChart.update();
+        return;
+      }
+
+      const ctx = document.getElementById('mrchart').getContext('2d');
+      mrChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: visibleLabels,
+          datasets: [{
+            label: 'Moving Range',
+            data: visibleValues,
+            backgroundColor: barBgColors,
+            borderColor: barColors,
+            borderWidth: 2,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#21262d',
+              borderColor: '#30363d',
+              borderWidth: 1,
+              titleColor: '#e6edf3',
+              bodyColor: '#c9d1d9',
+              callbacks: {
+                title: items => {
+                  const item = visible[items[0].dataIndex];
+                  return 'MR między zadaniem #' + data[item.fromIdx].id + ' a #' + data[item.fromIdx + 1].id;
+                },
+                label:      item => ' Moving Range: ' + item.parsed.y + ' dni',
+                afterLabel: item => {
+                  if (item.parsed.y > s.URL) return ' ⚠ Powyżej URL';
+                  return '';
+                },
+              },
             },
-            grid: {
-              color: 'rgba(48,54,61,0.6)',
-            },
-            border: { color: '#30363d' },
+            annotation: { annotations },
           },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Czas realizacji (dni)',
-              color: '#8b949e',
-              font: { size: 12 },
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', font: { size: 10 }, maxRotation: 45, minRotation: 30 },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
             },
-            ticks: { color: '#8b949e', font: { size: 11 } },
-            grid: { color: 'rgba(48,54,61,0.6)' },
-            border: { color: '#30363d' },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Moving Range (dni)', color: '#8b949e', font: { size: 12 } },
+              ticks: { color: '#8b949e', font: { size: 11 } },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
           },
         },
-      },
-    });
+      });
+    }
+
+    // ── Toggle MR annotation line ─────────────────────────────────────────────
+    function toggleMRLine(annotationId, btn) {
+      mrLineState[annotationId] = !mrLineState[annotationId];
+      btn.classList.toggle('inactive', !mrLineState[annotationId]);
+      if (mrChart) {
+        mrChart.options.plugins.annotation.annotations[annotationId].display = mrLineState[annotationId];
+        mrChart.update('none');
+      }
+    }
+
+    // ── MR Filter ─────────────────────────────────────────────────────────────
+    function applyMRFilter() {
+      const minVal = document.getElementById('mrMin').value;
+      const maxVal = document.getElementById('mrMax').value;
+      mrFilterMin = minVal !== '' ? parseFloat(minVal) : null;
+      mrFilterMax = maxVal !== '' ? parseFloat(maxVal) : null;
+      buildMRChart();
+    }
+
+    function resetMRFilter() {
+      document.getElementById('mrMin').value = '';
+      document.getElementById('mrMax').value = '';
+      mrFilterMin = null;
+      mrFilterMax = null;
+      buildMRChart();
+    }
+
+    // ── Records table ─────────────────────────────────────────────────────────
+    function refreshTable(highlightId) {
+      const s = calcStats();
+      const mrMap = {};
+      s.mr.forEach((v, i) => { mrMap[data[i + 1].id] = v; });
+
+      const tbody = document.getElementById('recordsTbody');
+      tbody.innerHTML = data.map(d => {
+        const mr = mrMap[d.id] !== undefined ? mrMap[d.id] : '–';
+        const isNew = d.id === highlightId ? ' class="new-row"' : '';
+        return `<tr${isNew}><td>${d.id}</td><td>${d.closed}</td><td>${d.ct}</td><td>${mr}</td></tr>`;
+      }).join('');
+    }
+
+    // ── Add Record ────────────────────────────────────────────────────────────
+    function addRecord() {
+      const closedInput = document.getElementById('newClosed').value.trim();
+      const ctInput     = document.getElementById('newCT').value.trim();
+      const msg         = document.getElementById('formMsg');
+
+      if (!closedInput) {
+        msg.style.color = '#f85149';
+        msg.textContent = '❌ Podaj datę zamknięcia.';
+        return;
+      }
+      const ctVal = parseInt(ctInput, 10);
+      if (!ctInput || isNaN(ctVal) || ctVal < 1) {
+        msg.style.color = '#f85149';
+        msg.textContent = '❌ Podaj prawidłowy Cycle Time (liczba dni ≥ 1).';
+        return;
+      }
+
+      const newId = data.length > 0 ? Math.max(...data.map(d => d.id)) + 1 : 1;
+      data.push({ id: newId, closed: closedInput, ct: ctVal });
+
+      updateKPIs();
+      buildXChart();
+      buildMRChart();
+      refreshTable(newId);
+
+      document.getElementById('newClosed').value = '';
+      document.getElementById('newCT').value     = '';
+      msg.style.color = '#3fb950';
+      msg.textContent = `✅ Dodano rekord #${newId}: ${closedInput}, CT = ${ctVal} dni.`;
+      setTimeout(() => { msg.textContent = ''; }, 5000);
+    }
+
+    // ── Unicorn 🦄 ────────────────────────────────────────────────────────────
+    let unicornActive  = true;
+    let fartIntervalId = null;
+
+    const RAINBOW = [0, 20, 55, 120, 185, 240, 275, 310];
+
+    function spawnFart() {
+      const zone = document.getElementById('fartZone');
+      if (!zone) return;
+      const bubble = document.createElement('div');
+      bubble.className = 'fart-bubble';
+      const hue  = RAINBOW[Math.floor(Math.random() * RAINBOW.length)];
+      const size = 7 + Math.random() * 13;
+      const dur  = (1.4 + Math.random() * 0.8).toFixed(2);
+      bubble.style.cssText =
+        `--hue:${hue};--dur:${dur}s;` +
+        `width:${size}px;height:${size}px;` +
+        `left:${-4 - Math.random() * 12}px;` +
+        `bottom:${6 + Math.random() * 28}px;`;
+      zone.appendChild(bubble);
+      setTimeout(() => bubble.remove(), parseFloat(dur) * 1000 + 100);
+    }
+
+    function toggleUnicorn() {
+      unicornActive = !unicornActive;
+      const emoji = document.querySelector('.unicorn-emoji');
+      const label = document.getElementById('unicornLabel');
+      if (unicornActive) {
+        emoji.style.opacity = '1';
+        emoji.style.animationPlayState = 'running';
+        label.textContent = 'ukryj jednorożca';
+        fartIntervalId = setInterval(spawnFart, 320);
+      } else {
+        emoji.style.opacity = '0.2';
+        emoji.style.animationPlayState = 'paused';
+        label.textContent = 'pokaż jednorożca';
+        clearInterval(fartIntervalId);
+        document.querySelectorAll('.fart-bubble').forEach(b => b.remove());
+      }
+    }
+
+    fartIntervalId = setInterval(spawnFart, 320);
+
+    // ── Initialise ────────────────────────────────────────────────────────────
+    updateKPIs();
+    buildXChart();
+    buildMRChart();
+    refreshTable(null);
   </script>
 </body>
 </html>

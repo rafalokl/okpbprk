@@ -416,6 +416,7 @@
   <div class="tab-nav">
     <button class="tab-btn active" id="btn-xchart" onclick="switchTab('xchart')">📈 X-Chart</button>
     <button class="tab-btn" id="btn-mr" onclick="switchTab('mr')">📊 Moving Ranges</button>
+    <button class="tab-btn" id="btn-dr" onclick="switchTab('dr')">📦 XmR Tempo</button>
   </div>
 
   <!-- ══════════════════════════════════════════
@@ -495,6 +496,161 @@
           <div class="legend-line dashed" style="--c:#3fb950;"></div>
           <span>LRL = 0</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       Tab 3 – XmR Tempo dostarczania
+  ══════════════════════════════════════════ -->
+  <div id="tab-dr" class="tab-pane">
+    <div class="kpi-row" id="kpiRowDR"></div>
+
+    <!-- Controls: X-chart line toggles -->
+    <div class="controls-row">
+      <div class="controls-group">
+        <span class="controls-label">Linie X:</span>
+        <button class="toggle-btn" id="dr-tog-medDR" onclick="toggleDRLine('medDR',this)">Mediana DR</button>
+        <button class="toggle-btn" id="dr-tog-UNPL"  onclick="toggleDRLine('UNPL',this)">UNPL</button>
+        <button class="toggle-btn" id="dr-tog-LNPL"  onclick="toggleDRLine('LNPL',this)">LNPL</button>
+        <button class="toggle-btn" id="dr-tog-z2Up"  onclick="toggleDRLine('z2Up',this)">2/3+</button>
+        <button class="toggle-btn" id="dr-tog-z2Lo"  onclick="toggleDRLine('z2Lo',this)">2/3−</button>
+        <button class="toggle-btn" id="dr-tog-z1Up"  onclick="toggleDRLine('z1Up',this)">1/3+</button>
+        <button class="toggle-btn" id="dr-tog-z1Lo"  onclick="toggleDRLine('z1Lo',this)">1/3−</button>
+      </div>
+      <div class="controls-group">
+        <span class="controls-label">Linie mR:</span>
+        <button class="toggle-btn" id="dr-tog-medMR" onclick="toggleDRLine('medMR',this)">Mediana MR</button>
+        <button class="toggle-btn" id="dr-tog-drUrl" onclick="toggleDRLine('drUrl',this)">URL</button>
+      </div>
+    </div>
+
+    <!-- Controls: date filter -->
+    <div class="controls-row">
+      <div class="controls-group">
+        <span class="controls-label">Filtruj po dacie:</span>
+        <input type="date" id="drDateFrom" class="filter-input" style="width:140px" aria-label="Od daty">
+        <span style="color:#8b949e;font-size:12px;">–</span>
+        <input type="date" id="drDateTo" class="filter-input" style="width:140px" aria-label="Do daty">
+        <button class="filter-btn" onclick="applyDRFilter()">Zastosuj</button>
+        <button class="filter-btn" onclick="resetDRFilter()">Reset</button>
+      </div>
+    </div>
+
+    <!-- X-Chart panel -->
+    <div class="chart-panel">
+      <h2>Tygodniowe tempo dostarczania (szt./tydzień) – XmR X-Chart</h2>
+      <div class="chart-wrapper">
+        <canvas id="drXChart"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#58a6ff;"></div>
+          <span>DR tygodniowe</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#d2a8ff;"></div>
+          <span>Mediana DR</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#f85149;"></div>
+          <span>UNPL</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#3fb950;"></div>
+          <span>LNPL</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#ffa657;"></div>
+          <span>2/3 strefa</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#e3b341;"></div>
+          <span>1/3 strefa</span>
+        </div>
+      </div>
+      <!-- Signal legend -->
+      <div class="legend-row" style="margin-top:10px">
+        <div class="legend-item">
+          <div style="width:13px;height:13px;border-radius:50%;background:#f85149;flex-shrink:0;"></div>
+          <span>Sygnał silny (1 pkt poza UNPL/LNPL)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width:13px;height:13px;border-radius:50%;background:#ffa657;flex-shrink:0;"></div>
+          <span>Sygnał umiarkowany (2 z 3 poza 2/3)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width:13px;height:13px;border-radius:50%;background:#e3b341;flex-shrink:0;"></div>
+          <span>Sygnał trwały słaby (3 z 5 poza 1/3)</span>
+        </div>
+        <div class="legend-item">
+          <div style="width:13px;height:13px;border-radius:50%;background:#8b949e;flex-shrink:0;"></div>
+          <span>Trwała zmiana (8 z jednej strony mediany)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MR filter controls -->
+    <div class="controls-row" style="margin-top:24px">
+      <div class="controls-group">
+        <span class="controls-label">Filtruj MR:</span>
+        <input type="number" id="drMrMin" class="filter-input" placeholder="Min" min="0" aria-label="Min MR">
+        <span style="color:#8b949e;font-size:12px;">–</span>
+        <input type="number" id="drMrMax" class="filter-input" placeholder="Max" min="0" aria-label="Max MR">
+        <button class="filter-btn" onclick="applyDRMRFilter()">Zastosuj</button>
+        <button class="filter-btn" onclick="resetDRMRFilter()">Reset</button>
+      </div>
+    </div>
+
+    <!-- MR-Chart panel -->
+    <div class="chart-panel" style="margin-top:0">
+      <h2>Moving Ranges – tygodniowe tempo dostarczania (|DR<sub>i</sub> − DR<sub>i‑1</sub>|)</h2>
+      <div class="chart-wrapper" style="height:280px">
+        <canvas id="drMRChart"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-line" style="background:#ffa657;"></div>
+          <span>Moving Range</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:#d2a8ff;"></div>
+          <span>Mediana MR</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-line dashed" style="--c:#f85149;"></div>
+          <span>URL = 3.865 × Med.MR</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add daily record form -->
+    <div class="add-record-panel">
+      <h3>➕ Dodaj dzienny rekord tempa</h3>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Data (DD.MM.YYYY)</label>
+          <input type="text" id="drNewDate" placeholder="np. 20.04.2025" maxlength="12">
+        </div>
+        <div class="form-field">
+          <label>Przepustowość (szt.)</label>
+          <input type="number" id="drNewVal" placeholder="np. 5" min="0" max="9999">
+        </div>
+        <button class="submit-btn" onclick="addDRRecord()">Dodaj</button>
+      </div>
+      <div class="form-msg" id="drFormMsg"></div>
+      <div class="records-table-wrap">
+        <table class="records-table" id="drRecordsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Data</th>
+              <th>Przepustowość</th>
+              <th>Tydzień ISO</th>
+            </tr>
+          </thead>
+          <tbody id="drRecordsTbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -608,6 +764,12 @@
       document.getElementById('btn-' + tabId).classList.add('active');
       if (tabId === 'mr') {
         requestAnimationFrame(() => initPenguinOverlay(false));
+      }
+      if (tabId === 'dr') {
+        requestAnimationFrame(() => {
+          if (!drXChartInst) initDRTab();
+          else refreshDRCharts();
+        });
       }
     }
 
@@ -1159,6 +1321,596 @@
     buildXChart();
     buildMRChart();
     refreshTable(null);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ── DR Tab: Tygodniowe Tempo Dostarczania (XmR) ────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Raw daily data from "4. Tempo dostarczania dzienne.csv"
+    let drRawData = [
+      { date: '07.01.2025', v:  0 }, { date: '08.01.2025', v:  2 },
+      { date: '09.01.2025', v: 10 }, { date: '10.01.2025', v:  3 },
+      { date: '11.01.2025', v:  0 }, { date: '12.01.2025', v:  0 },
+      { date: '13.01.2025', v:  2 }, { date: '14.01.2025', v:  3 },
+      { date: '15.01.2025', v:  7 }, { date: '16.01.2025', v:  0 },
+      { date: '17.01.2025', v:  0 }, { date: '18.01.2025', v:  0 },
+      { date: '19.01.2025', v:  0 }, { date: '20.01.2025', v:  5 },
+      { date: '21.01.2025', v:  2 }, { date: '22.01.2025', v:  0 },
+      { date: '23.01.2025', v:  0 }, { date: '24.01.2025', v:  0 },
+      { date: '25.01.2025', v:  0 }, { date: '26.01.2025', v:  0 },
+      { date: '27.01.2025', v:  1 }, { date: '28.01.2025', v:  1 },
+      { date: '29.01.2025', v:  0 }, { date: '30.01.2025', v:  5 },
+      { date: '31.01.2025', v:  4 }, { date: '01.02.2025', v:  0 },
+      { date: '02.02.2025', v:  0 }, { date: '03.02.2025', v:  7 },
+      { date: '04.02.2025', v:  0 }, { date: '05.02.2025', v:  2 },
+      { date: '06.02.2025', v:  2 }, { date: '07.02.2025', v: 12 },
+      { date: '08.02.2025', v:  0 }, { date: '09.02.2025', v:  0 },
+      { date: '10.02.2025', v:  1 }, { date: '11.02.2025', v:  0 },
+      { date: '12.02.2025', v:  0 }, { date: '13.02.2025', v:  2 },
+      { date: '14.02.2025', v: 12 }, { date: '15.02.2025', v:  0 },
+      { date: '16.02.2025', v:  0 }, { date: '17.02.2025', v:  1 },
+      { date: '18.02.2025', v:  0 }, { date: '19.02.2025', v:  0 },
+      { date: '20.02.2025', v:  3 }, { date: '21.02.2025', v: 11 },
+      { date: '22.02.2025', v:  0 }, { date: '23.02.2025', v:  0 },
+      { date: '24.02.2025', v:  6 }, { date: '25.02.2025', v:  0 },
+      { date: '26.02.2025', v:  0 }, { date: '27.02.2025', v:  6 },
+      { date: '28.02.2025', v:  7 }, { date: '01.03.2025', v:  0 },
+      { date: '02.03.2025', v:  0 }, { date: '03.03.2025', v:  2 },
+      { date: '04.03.2025', v:  0 }, { date: '05.03.2025', v:  0 },
+      { date: '06.03.2025', v:  3 }, { date: '07.03.2025', v:  5 },
+      { date: '08.03.2025', v:  0 }, { date: '09.03.2025', v:  0 },
+      { date: '10.03.2025', v:  1 }, { date: '11.03.2025', v:  0 },
+      { date: '12.03.2025', v:  0 }, { date: '13.03.2025', v:  9 },
+      { date: '14.03.2025', v:  7 }, { date: '15.03.2025', v:  0 },
+      { date: '16.03.2025', v:  0 }, { date: '17.03.2025', v:  3 },
+      { date: '18.03.2025', v:  0 }, { date: '19.03.2025', v:  0 },
+      { date: '20.03.2025', v:  4 }, { date: '21.03.2025', v: 10 },
+      { date: '22.03.2025', v:  0 }, { date: '23.03.2025', v:  0 },
+      { date: '24.03.2025', v:  1 }, { date: '25.03.2025', v:  0 },
+      { date: '26.03.2025', v:  0 }, { date: '27.03.2025', v:  5 },
+      { date: '28.03.2025', v:  1 }, { date: '29.03.2025', v:  0 },
+      { date: '30.03.2025', v:  0 }, { date: '31.03.2025', v:  2 },
+      { date: '01.04.2025', v:  0 }, { date: '02.04.2025', v:  0 },
+      { date: '03.04.2025', v:  2 }, { date: '04.04.2025', v: 11 },
+      { date: '05.04.2025', v:  0 }, { date: '06.04.2025', v:  0 },
+      { date: '07.04.2025', v:  1 }, { date: '08.04.2025', v:  0 },
+      { date: '09.04.2025', v:  0 }, { date: '10.04.2025', v:  5 },
+      { date: '11.04.2025', v:  2 }, { date: '12.04.2025', v:  0 },
+      { date: '13.04.2025', v:  0 }, { date: '14.04.2025', v:  1 },
+      { date: '15.04.2025', v:  0 }, { date: '16.04.2025', v:  0 },
+      { date: '17.04.2025', v:  4 }, { date: '18.04.2025', v:  7 },
+      { date: '19.04.2025', v:  0 },
+    ];
+
+    // DR state
+    let drXChartInst  = null;
+    let drMRChartInst = null;
+    let drDateFrom    = null;
+    let drDateTo      = null;
+    let drMrFilterMin = null;
+    let drMrFilterMax = null;
+
+    const drLineState = {
+      medDR: true, UNPL: true, LNPL: true,
+      z2Up: true, z2Lo: true, z1Up: true, z1Lo: true,
+      medMR: true, drUrl: true,
+    };
+
+    // Parse DD.MM.YYYY → Date
+    function parseDMY(s) {
+      const [d, m, y] = s.split('.');
+      return new Date(+y, +m - 1, +d);
+    }
+
+    // Format Date → 'YYYY-MM-DD' for comparisons
+    function fmtISO(dt) {
+      return dt.getFullYear() + '-' +
+        String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+        String(dt.getDate()).padStart(2, '0');
+    }
+
+    // ISO week key  e.g. '2025-W03'
+    function isoWeekKey(dt) {
+      const d = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
+      const dow = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dow);
+      const y1 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const wn = Math.ceil(((d - y1) / 86400000 + 1) / 7);
+      return d.getUTCFullYear() + '-W' + String(wn).padStart(2, '0');
+    }
+
+    // Median of an array
+    function drMedian(arr) {
+      if (!arr.length) return 0;
+      const s = [...arr].sort((a, b) => a - b);
+      const n = s.length;
+      return n % 2 === 1 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+    }
+
+    // Aggregate raw daily data to weekly totals (with optional date filter)
+    function getDRWeeks() {
+      const filtered = drRawData.filter(r => {
+        const iso = fmtISO(parseDMY(r.date));
+        if (drDateFrom && iso < drDateFrom) return false;
+        if (drDateTo   && iso > drDateTo)   return false;
+        return true;
+      });
+      const map = new Map();
+      filtered.forEach(r => {
+        const k = isoWeekKey(parseDMY(r.date));
+        if (!map.has(k)) map.set(k, { key: k, total: 0 });
+        map.get(k).total += r.v;
+      });
+      return [...map.values()].sort((a, b) => a.key < b.key ? -1 : 1);
+    }
+
+    // Median-based XmR statistics
+    function calcDRStats(weeks) {
+      const dr = weeks.map(w => w.total);
+      const n  = dr.length;
+      if (n < 2) return null;
+      const medDR    = drMedian(dr);
+      const mr       = [];
+      for (let i = 1; i < n; i++) mr.push(Math.abs(dr[i] - dr[i - 1]));
+      const medMR    = drMedian(mr);
+      const half     = 3.145 * medMR;   // Wheeler median-based scaling
+      const UNPL     = medDR + half;
+      const LNPL     = Math.max(0, medDR - half);
+      const z1Up     = medDR + half / 3;
+      const z2Up     = medDR + 2 * half / 3;
+      const z1Lo     = medDR - half / 3;
+      const z2Lo     = medDR - 2 * half / 3;
+      const URL      = 3.865 * medMR;   // median-based URL for mR chart
+      return { dr, n, medDR, mr, medMR, UNPL, LNPL, z1Up, z2Up, z1Lo, z2Lo, URL };
+    }
+
+    // Signal detection – returns per-point signal type (priority: strong > moderate > persistent_weak > persistent_change)
+    function detectDRSignals(dr, s) {
+      const n   = dr.length;
+      const sig = new Array(n).fill(null);
+
+      // Persistent change: 8 consecutive on one side of median
+      for (let i = 0; i <= n - 8; i++) {
+        let above = 0, below = 0;
+        for (let j = i; j < i + 8; j++) {
+          if (dr[j] > s.medDR) above++;
+          else if (dr[j] < s.medDR) below++;
+        }
+        if (above >= 8 || below >= 8) {
+          for (let j = i; j < i + 8; j++) {
+            if (!sig[j]) sig[j] = 'persistent_change';
+          }
+        }
+      }
+
+      // Persistent weak: 3 of 5 consecutive beyond 1/3 zone (either side)
+      for (let i = 0; i <= n - 5; i++) {
+        const pts = [];
+        for (let j = i; j < i + 5; j++) {
+          if (dr[j] > s.z1Up || dr[j] < s.z1Lo) pts.push(j);
+        }
+        if (pts.length >= 3) {
+          pts.forEach(j => {
+            if (!sig[j] || sig[j] === 'persistent_change') sig[j] = 'persistent_weak';
+          });
+        }
+      }
+
+      // Moderate: 2 of 3 consecutive beyond 2/3 zone (either side)
+      for (let i = 0; i <= n - 3; i++) {
+        const pts = [];
+        for (let j = i; j < i + 3; j++) {
+          if (dr[j] > s.z2Up || dr[j] < s.z2Lo) pts.push(j);
+        }
+        if (pts.length >= 2) {
+          pts.forEach(j => {
+            if (!sig[j] || sig[j] === 'persistent_change' || sig[j] === 'persistent_weak') {
+              sig[j] = 'moderate';
+            }
+          });
+        }
+      }
+
+      // Strong: 1 point beyond UNPL or below LNPL
+      for (let i = 0; i < n; i++) {
+        if (dr[i] > s.UNPL || (s.LNPL > 0 && dr[i] < s.LNPL)) sig[i] = 'strong';
+      }
+
+      return sig;
+    }
+
+    function drSignalColor(sig) {
+      if (sig === 'strong')           return '#f85149';
+      if (sig === 'moderate')         return '#ffa657';
+      if (sig === 'persistent_weak')  return '#e3b341';
+      if (sig === 'persistent_change') return '#8b949e';
+      return '#58a6ff';
+    }
+
+    // Update DR KPI cards
+    function updateDRKPIs() {
+      const weeks = getDRWeeks();
+      const s     = calcDRStats(weeks);
+      if (!s) {
+        document.getElementById('kpiRowDR').innerHTML =
+          '<div class="kpi-card"><div class="kpi-label">Brak danych</div><div class="kpi-value">–</div></div>';
+        return;
+      }
+      const defs = [
+        { label: 'Tygodnie',    value: s.n,                  unit: 'szt.',       cls: '' },
+        { label: 'Mediana DR',  value: s.medDR.toFixed(1),   unit: 'szt./tyg.', cls: 'kpi-mean' },
+        { label: 'Mediana MR',  value: s.medMR.toFixed(1),   unit: 'szt.',      cls: 'kpi-mrbar' },
+        { label: 'UNPL',        value: s.UNPL.toFixed(1),    unit: 'szt.',      cls: 'kpi-unpl' },
+        { label: 'LNPL',        value: s.LNPL.toFixed(1),    unit: 'szt.',      cls: 'kpi-lnpl' },
+        { label: 'Max DR',      value: Math.max(...s.dr),    unit: 'szt.',      cls: '' },
+      ];
+      document.getElementById('kpiRowDR').innerHTML = defs.map(k =>
+        `<div class="kpi-card ${k.cls}">
+           <div class="kpi-label">${k.label}</div>
+           <div class="kpi-value">${k.value}</div>
+           <div class="kpi-unit">${k.unit}</div>
+         </div>`).join('');
+    }
+
+    // Build (or update) DR X-Chart
+    function buildDRXChart() {
+      const weeks   = getDRWeeks();
+      const s       = calcDRStats(weeks);
+      if (!s) return;
+
+      const signals     = detectDRSignals(s.dr, s);
+      const labels      = weeks.map(w => w.key.replace('-', ' '));
+      const ptColors    = signals.map(sg => drSignalColor(sg));
+      const ptRadii     = signals.map(sg => sg ? 7 : 5);
+
+      const annotations = {
+        medDRLine: {
+          type: 'line', yMin: s.medDR, yMax: s.medDR,
+          borderColor: '#d2a8ff', borderWidth: 2,
+          display: drLineState.medDR,
+          label: { display: true, content: 'Med.DR = ' + s.medDR.toFixed(1), position: 'start',
+            color: '#d2a8ff', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        UNPLLine: {
+          type: 'line', yMin: s.UNPL, yMax: s.UNPL,
+          borderColor: '#f85149', borderWidth: 2, borderDash: [8, 5],
+          display: drLineState.UNPL,
+          label: { display: true, content: 'UNPL = ' + s.UNPL.toFixed(1), position: 'end',
+            color: '#f85149', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        LNPLLine: {
+          type: 'line', yMin: s.LNPL, yMax: s.LNPL,
+          borderColor: '#3fb950', borderWidth: 2, borderDash: [8, 5],
+          display: drLineState.LNPL,
+          label: { display: true, content: 'LNPL = ' + s.LNPL.toFixed(1), position: 'end',
+            color: '#3fb950', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: 10 },
+        },
+        z2UpLine: {
+          type: 'line', yMin: s.z2Up, yMax: s.z2Up,
+          borderColor: '#ffa657', borderWidth: 1.5, borderDash: [4, 4],
+          display: drLineState.z2Up,
+          label: { display: true, content: '2/3+ = ' + s.z2Up.toFixed(1), position: 'start',
+            color: '#ffa657', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 10 }, padding: { x: 4, y: 2 }, yAdjust: -8 },
+        },
+        z2LoLine: {
+          type: 'line', yMin: s.z2Lo, yMax: s.z2Lo,
+          borderColor: '#ffa657', borderWidth: 1.5, borderDash: [4, 4],
+          display: drLineState.z2Lo,
+          label: { display: true, content: '2/3− = ' + s.z2Lo.toFixed(1), position: 'start',
+            color: '#ffa657', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 10 }, padding: { x: 4, y: 2 }, yAdjust: 8 },
+        },
+        z1UpLine: {
+          type: 'line', yMin: s.z1Up, yMax: s.z1Up,
+          borderColor: '#e3b341', borderWidth: 1.5, borderDash: [3, 4],
+          display: drLineState.z1Up,
+          label: { display: true, content: '1/3+ = ' + s.z1Up.toFixed(1), position: 'end',
+            color: '#e3b341', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 10 }, padding: { x: 4, y: 2 }, yAdjust: -8 },
+        },
+        z1LoLine: {
+          type: 'line', yMin: s.z1Lo, yMax: s.z1Lo,
+          borderColor: '#e3b341', borderWidth: 1.5, borderDash: [3, 4],
+          display: drLineState.z1Lo,
+          label: { display: true, content: '1/3− = ' + s.z1Lo.toFixed(1), position: 'end',
+            color: '#e3b341', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 10 }, padding: { x: 4, y: 2 }, yAdjust: 8 },
+        },
+      };
+
+      const sigTooltip = sg => {
+        if (sg === 'strong')            return ' 🔴 Sygnał silny';
+        if (sg === 'moderate')          return ' 🟠 Sygnał umiarkowany';
+        if (sg === 'persistent_weak')   return ' 🟡 Sygnał trwały słaby';
+        if (sg === 'persistent_change') return ' ⬜ Trwała zmiana';
+        return '';
+      };
+
+      if (drXChartInst) {
+        drXChartInst.data.labels                              = labels;
+        drXChartInst.data.datasets[0].data                   = s.dr;
+        drXChartInst.data.datasets[0].pointBackgroundColor   = ptColors;
+        drXChartInst.data.datasets[0].pointBorderColor       = ptColors;
+        drXChartInst.data.datasets[0].pointRadius            = ptRadii;
+        drXChartInst.options.plugins.annotation.annotations  = annotations;
+        drXChartInst.options.plugins.tooltip.callbacks.afterLabel =
+          item => sigTooltip(signals[item.dataIndex]);
+        drXChartInst.update();
+        return;
+      }
+
+      const ctx = document.getElementById('drXChart').getContext('2d');
+      drXChartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'DR tygodniowe',
+            data: s.dr,
+            borderColor: '#58a6ff',
+            backgroundColor: 'rgba(88,166,255,0.10)',
+            borderWidth: 2,
+            pointRadius: ptRadii,
+            pointHoverRadius: 9,
+            pointBackgroundColor: ptColors,
+            pointBorderColor: ptColors,
+            tension: 0.2,
+            fill: false,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#21262d',
+              borderColor: '#30363d',
+              borderWidth: 1,
+              titleColor: '#e6edf3',
+              bodyColor: '#c9d1d9',
+              callbacks: {
+                title:      items => weeks[items[0].dataIndex].key.replace('-', ' '),
+                label:      item  => ' DR: ' + item.parsed.y + ' szt./tyg.',
+                afterLabel: item  => sigTooltip(signals[item.dataIndex]),
+              },
+            },
+            annotation: { annotations },
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', font: { size: 10 }, maxRotation: 45, minRotation: 30 },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Przepustowość (szt./tydzień)', color: '#8b949e', font: { size: 12 } },
+              ticks: { color: '#8b949e', font: { size: 11 } },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
+          },
+        },
+      });
+    }
+
+    // Build (or update) DR MR-Chart
+    function buildDRMRChart() {
+      const weeks = getDRWeeks();
+      const s     = calcDRStats(weeks);
+      if (!s) return;
+
+      const allMR = s.mr.map((v, i) => ({
+        v,
+        label: weeks[i].key.replace('-', ' ') + '→' + weeks[i + 1].key.replace('-', ' '),
+      }));
+
+      const visible = allMR.filter(item => {
+        if (drMrFilterMin !== null && item.v < drMrFilterMin) return false;
+        if (drMrFilterMax !== null && item.v > drMrFilterMax) return false;
+        return true;
+      });
+
+      const visValues  = visible.map(i => i.v);
+      const visLabels  = visible.map(i => i.label);
+      const barColors  = visValues.map(v => v > s.URL ? '#f85149' : '#ffa657');
+      const barBgColors = visValues.map(v => v > s.URL ? 'rgba(248,81,73,0.45)' : 'rgba(255,166,87,0.45)');
+
+      const annotations = {
+        medMRLine: {
+          type: 'line', yMin: s.medMR, yMax: s.medMR,
+          borderColor: '#d2a8ff', borderWidth: 2,
+          display: drLineState.medMR,
+          label: { display: true, content: 'Med.MR = ' + s.medMR.toFixed(1), position: 'start',
+            color: '#d2a8ff', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+        drUrlLine: {
+          type: 'line', yMin: s.URL, yMax: s.URL,
+          borderColor: '#f85149', borderWidth: 2, borderDash: [8, 5],
+          display: drLineState.drUrl,
+          label: { display: true, content: 'URL = ' + s.URL.toFixed(1), position: 'end',
+            color: '#f85149', backgroundColor: 'rgba(13,17,23,0.85)',
+            font: { size: 11, weight: 'bold' }, padding: { x: 6, y: 3 }, yAdjust: -10 },
+        },
+      };
+
+      if (drMRChartInst) {
+        drMRChartInst.data.labels                             = visLabels;
+        drMRChartInst.data.datasets[0].data                  = visValues;
+        drMRChartInst.data.datasets[0].backgroundColor       = barBgColors;
+        drMRChartInst.data.datasets[0].borderColor           = barColors;
+        drMRChartInst.options.plugins.annotation.annotations = annotations;
+        drMRChartInst.update();
+        return;
+      }
+
+      const ctx = document.getElementById('drMRChart').getContext('2d');
+      drMRChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: visLabels,
+          datasets: [{
+            label: 'Moving Range',
+            data: visValues,
+            backgroundColor: barBgColors,
+            borderColor: barColors,
+            borderWidth: 2,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#21262d',
+              borderColor: '#30363d',
+              borderWidth: 1,
+              titleColor: '#e6edf3',
+              bodyColor: '#c9d1d9',
+              callbacks: {
+                label:      item => ' MR: ' + item.parsed.y + ' szt.',
+                afterLabel: item => item.parsed.y > s.URL ? ' ⚠ Powyżej URL' : '',
+              },
+            },
+            annotation: { annotations },
+          },
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', font: { size: 9 }, maxRotation: 45, minRotation: 30 },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Moving Range', color: '#8b949e', font: { size: 12 } },
+              ticks: { color: '#8b949e', font: { size: 11 } },
+              grid:  { color: 'rgba(48,54,61,0.6)' },
+              border:{ color: '#30363d' },
+            },
+          },
+        },
+      });
+    }
+
+    // Toggle a DR annotation line on/off
+    function toggleDRLine(key, btn) {
+      drLineState[key] = !drLineState[key];
+      btn.classList.toggle('inactive', !drLineState[key]);
+      // Map toggle key → annotation key and chart instance
+      const xKeys  = { medDR: 'medDRLine', UNPL: 'UNPLLine', LNPL: 'LNPLLine',
+                        z2Up: 'z2UpLine', z2Lo: 'z2LoLine', z1Up: 'z1UpLine', z1Lo: 'z1LoLine' };
+      const mrKeys = { medMR: 'medMRLine', drUrl: 'drUrlLine' };
+      if (xKeys[key] && drXChartInst) {
+        drXChartInst.options.plugins.annotation.annotations[xKeys[key]].display = drLineState[key];
+        drXChartInst.update('none');
+      }
+      if (mrKeys[key] && drMRChartInst) {
+        drMRChartInst.options.plugins.annotation.annotations[mrKeys[key]].display = drLineState[key];
+        drMRChartInst.update('none');
+      }
+    }
+
+    // Date-range filter
+    function applyDRFilter() {
+      drDateFrom = document.getElementById('drDateFrom').value || null;
+      drDateTo   = document.getElementById('drDateTo').value   || null;
+      refreshDRCharts();
+    }
+
+    function resetDRFilter() {
+      document.getElementById('drDateFrom').value = '';
+      document.getElementById('drDateTo').value   = '';
+      drDateFrom = null;
+      drDateTo   = null;
+      refreshDRCharts();
+    }
+
+    // MR value filter
+    function applyDRMRFilter() {
+      const mn = document.getElementById('drMrMin').value;
+      const mx = document.getElementById('drMrMax').value;
+      drMrFilterMin = mn !== '' ? parseFloat(mn) : null;
+      drMrFilterMax = mx !== '' ? parseFloat(mx) : null;
+      buildDRMRChart();
+    }
+
+    function resetDRMRFilter() {
+      document.getElementById('drMrMin').value = '';
+      document.getElementById('drMrMax').value = '';
+      drMrFilterMin = null;
+      drMrFilterMax = null;
+      buildDRMRChart();
+    }
+
+    // Refresh all DR charts and table
+    function refreshDRCharts() {
+      updateDRKPIs();
+      buildDRXChart();
+      buildDRMRChart();
+      refreshDRTable();
+    }
+
+    // Add a new daily record
+    function addDRRecord() {
+      const dateIn = document.getElementById('drNewDate').value.trim();
+      const valIn  = document.getElementById('drNewVal').value.trim();
+      const msg    = document.getElementById('drFormMsg');
+
+      if (!dateIn || !/^\d{2}\.\d{2}\.\d{4}$/.test(dateIn)) {
+        msg.style.color = '#f85149';
+        msg.textContent = '❌ Podaj datę w formacie DD.MM.YYYY.';
+        return;
+      }
+      const val = parseInt(valIn, 10);
+      if (valIn === '' || isNaN(val) || val < 0) {
+        msg.style.color = '#f85149';
+        msg.textContent = '❌ Podaj prawidłową przepustowość (liczba ≥ 0).';
+        return;
+      }
+      if (drRawData.some(r => r.date === dateIn)) {
+        msg.style.color = '#f85149';
+        msg.textContent = '❌ Data ' + dateIn + ' już istnieje w zbiorze.';
+        return;
+      }
+
+      const newDt = parseDMY(dateIn);
+      const idx   = drRawData.findIndex(r => parseDMY(r.date) > newDt);
+      if (idx === -1) drRawData.push({ date: dateIn, v: val });
+      else            drRawData.splice(idx, 0, { date: dateIn, v: val });
+
+      refreshDRCharts();
+
+      document.getElementById('drNewDate').value = '';
+      document.getElementById('drNewVal').value  = '';
+      msg.style.color = '#3fb950';
+      msg.textContent = '✅ Dodano: ' + dateIn + ' → ' + val + ' szt.';
+      setTimeout(() => { msg.textContent = ''; }, 5000);
+    }
+
+    // Refresh the DR records table
+    function refreshDRTable() {
+      const tbody = document.getElementById('drRecordsTbody');
+      if (!tbody) return;
+      tbody.innerHTML = drRawData.map((r, i) =>
+        `<tr><td>${i + 1}</td><td>${r.date}</td><td>${r.v}</td><td>${isoWeekKey(parseDMY(r.date)).replace('-', ' ')}</td></tr>`
+      ).join('');
+    }
+
+    // Initialise DR tab (called lazily on first visit)
+    function initDRTab() {
+      updateDRKPIs();
+      buildDRXChart();
+      buildDRMRChart();
+      refreshDRTable();
+    }
   </script>
 </body>
 </html>

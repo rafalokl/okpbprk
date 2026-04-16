@@ -1453,14 +1453,15 @@
       const mr       = [];
       for (let i = 1; i < n; i++) mr.push(Math.abs(dr[i] - dr[i - 1]));
       const medMR    = drMedian(mr);
-      const half     = 3.145 * medMR;   // Wheeler median-based scaling
+      const half     = 3.145 * medMR;   // Wheeler's median-based scaling: UNPL/LNPL = medX ± 3.145 × medMR
       const UNPL     = medDR + half;
+      // LNPL clamped to 0: for count data the natural lower bound is 0
       const LNPL     = Math.max(0, medDR - half);
       const z1Up     = medDR + half / 3;
       const z2Up     = medDR + 2 * half / 3;
       const z1Lo     = medDR - half / 3;
       const z2Lo     = medDR - 2 * half / 3;
-      const URL      = 3.865 * medMR;   // median-based URL for mR chart
+      const URL      = 3.865 * medMR;   // Wheeler's median-based URL for mR chart (D4 ≈ 3.865 for n=2 with median)
       return { dr, n, medDR, mr, medMR, UNPL, LNPL, z1Up, z2Up, z1Lo, z2Lo, URL };
     }
 
@@ -1512,6 +1513,7 @@
       }
 
       // Strong: 1 point beyond UNPL or below LNPL
+      // Note: when LNPL is clamped to 0, no point can be below it (counts ≥ 0), so the check is skipped
       for (let i = 0; i < n; i++) {
         if (dr[i] > s.UNPL || (s.LNPL > 0 && dr[i] < s.LNPL)) sig[i] = 'strong';
       }
@@ -1869,8 +1871,9 @@
         msg.textContent = '❌ Podaj datę w formacie DD.MM.YYYY.';
         return;
       }
-      const val = parseInt(valIn, 10);
-      if (valIn === '' || isNaN(val) || val < 0) {
+      // Use strict numeric check to reject inputs like '5abc'
+      const val = Number(valIn);
+      if (valIn === '' || !Number.isInteger(val) || val < 0) {
         msg.style.color = '#f85149';
         msg.textContent = '❌ Podaj prawidłową przepustowość (liczba ≥ 0).';
         return;

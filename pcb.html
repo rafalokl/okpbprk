@@ -606,6 +606,9 @@
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('tab-' + tabId).classList.add('active');
       document.getElementById('btn-' + tabId).classList.add('active');
+      if (tabId === 'mr') {
+        requestAnimationFrame(() => initPenguinOverlay(false));
+      }
     }
 
     // ── KPI rows ──────────────────────────────────────────────────────────────
@@ -819,6 +822,8 @@
       }
 
       const ctx = document.getElementById('mrchart').getContext('2d');
+      // Penguins will be spawned after first render
+      setTimeout(() => initPenguinOverlay(true), 150);
       mrChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -991,6 +996,163 @@
     }
 
     fartIntervalId = setInterval(spawnFart, 320);
+
+    // ── Penguin animation on MR chart 🐧 ──────────────────────────────────────
+    const PENGUIN_COUNT = 4;
+    let penguinCanvas   = null;
+    let penguinAnimId   = null;
+    let penguins        = [];
+    let penguinsReady   = false;
+
+    function initPenguinOverlay(spawnNew) {
+      const chartCanvas = document.getElementById('mrchart');
+      const wrapper     = chartCanvas.parentElement;
+
+      if (!penguinCanvas) {
+        penguinCanvas = document.createElement('canvas');
+        penguinCanvas.style.cssText =
+          'position:absolute;top:0;left:0;pointer-events:none;z-index:10;';
+        wrapper.appendChild(penguinCanvas);
+      }
+
+      // Match canvas physical pixel size to Chart.js canvas
+      penguinCanvas.width  = chartCanvas.width;
+      penguinCanvas.height = chartCanvas.height;
+      penguinCanvas.style.width  = chartCanvas.offsetWidth  + 'px';
+      penguinCanvas.style.height = chartCanvas.offsetHeight + 'px';
+
+      if (spawnNew || !penguinsReady) {
+        const bars = getMRBars();
+        if (bars.length) {
+          penguins = [];
+          for (let i = 0; i < PENGUIN_COUNT; i++) {
+            const barIdx = Math.floor(i * bars.length / PENGUIN_COUNT);
+            const bar    = bars[barIdx];
+            penguins.push({
+              x:         bar.x + (Math.random() - 0.5) * bar.width * 0.5,
+              y:         bar.y,
+              barIdx,
+              state:     'slide',
+              dir:       i % 2 === 0 ? 1 : -1,
+              speed:     0.55 + Math.random() * 0.5,
+              jumpT:     0,
+              fromX:     0, fromY: 0,
+              toX:       0, toY:   0,
+              targetBar: barIdx,
+            });
+          }
+          penguinsReady = true;
+        }
+      }
+
+      if (!penguinAnimId) runPenguinLoop();
+    }
+
+    function getMRBars() {
+      if (!mrChart) return [];
+      const meta = mrChart.getDatasetMeta(0);
+      if (!meta || !meta.data || !meta.data.length) return [];
+      return meta.data.map(bar => ({
+        x:     bar.x,
+        y:     bar.y,
+        base:  bar.base,
+        width: bar.width,
+        left:  bar.x - bar.width / 2,
+        right: bar.x + bar.width / 2,
+      }));
+    }
+
+    function runPenguinLoop() {
+      const ctx = penguinCanvas.getContext('2d');
+
+      function frame() {
+        penguinAnimId = requestAnimationFrame(frame);
+        if (!mrChart || !penguinCanvas) return;
+
+        // Keep overlay pixel-aligned with chart canvas
+        const chartCanvas = document.getElementById('mrchart');
+        if (penguinCanvas.width  !== chartCanvas.width ||
+            penguinCanvas.height !== chartCanvas.height) {
+          penguinCanvas.width  = chartCanvas.width;
+          penguinCanvas.height = chartCanvas.height;
+        }
+
+        ctx.clearRect(0, 0, penguinCanvas.width, penguinCanvas.height);
+        const bars = getMRBars();
+        if (!bars.length) return;
+
+        penguins.forEach(p => {
+          updatePenguin(p, bars);
+          drawPenguin(ctx, p);
+        });
+      }
+
+      frame();
+    }
+
+    function updatePenguin(p, bars) {
+      if (p.state === 'slide') {
+        // Keep bar index in bounds after filter changes
+        if (p.barIdx >= bars.length) p.barIdx = bars.length - 1;
+        const bar = bars[p.barIdx];
+        if (!bar) return;
+
+        p.x += p.dir * p.speed;
+        p.y  = bar.y;
+
+        if (p.dir > 0 && p.x >= bar.right - 3) {
+          const next = p.barIdx + 1;
+          if (next < bars.length) { beginJump(p, p.barIdx, next, bars); }
+          else                    { p.dir = -1; }
+        } else if (p.dir < 0 && p.x <= bar.left + 3) {
+          const prev = p.barIdx - 1;
+          if (prev >= 0) { beginJump(p, p.barIdx, prev, bars); }
+          else           { p.dir = 1; }
+        }
+      } else if (p.state === 'jump') {
+        p.jumpT += 0.038;
+        if (p.jumpT >= 1) {
+          p.jumpT  = 1;
+          p.barIdx = p.targetBar;
+          p.x      = p.toX;
+          p.y      = p.toY;
+          p.state  = 'slide';
+          p.dir    = p.toX >= p.fromX ? 1 : -1;
+        } else {
+          const t = p.jumpT;
+          p.x = p.fromX + (p.toX - p.fromX) * t;
+          const h = 28 + Math.abs(p.toY - p.fromY) * 0.4;
+          p.y = p.fromY + (p.toY - p.fromY) * t - h * 4 * t * (1 - t);
+        }
+      }
+    }
+
+    function beginJump(p, fromIdx, toIdx, bars) {
+      p.state     = 'jump';
+      p.targetBar = toIdx;
+      p.fromX     = p.x;
+      p.fromY     = bars[fromIdx].y;
+      p.toX       = bars[toIdx].x;
+      p.toY       = bars[toIdx].y;
+      p.jumpT     = 0;
+    }
+
+    function drawPenguin(ctx, p) {
+      const dpr  = window.devicePixelRatio || 1;
+      const size = Math.round(16 * dpr);
+      ctx.save();
+      ctx.font          = size + 'px serif';
+      ctx.textAlign     = 'center';
+      ctx.textBaseline  = 'bottom';
+      if (p.dir < 0) {
+        ctx.translate(p.x, p.y);
+        ctx.scale(-1, 1);
+        ctx.fillText('🐧', 0, 0);
+      } else {
+        ctx.fillText('🐧', p.x, p.y);
+      }
+      ctx.restore();
+    }
 
     // ── Initialise ────────────────────────────────────────────────────────────
     updateKPIs();
